@@ -8,10 +8,20 @@ import (
 )
 
 const (
-	BaseEnemyCount = 20
-	WaveScaling    = 1.2
-	BossEveryN     = 5
-	SpawnInterval  = 0.1
+	BaseEnemyCount   = 20
+	WaveScaling      = 1.2
+	BossEveryN       = 5
+	BaseSpawnInterval = 0.1
+)
+
+type WaveEvent int
+
+const (
+	EventNone WaveEvent = iota
+	EventSwarmerRush
+	EventTankBrigade
+	EventDasherBlitz
+	EventBloodMoon
 )
 
 type WaveSpawner struct {
@@ -21,6 +31,8 @@ type WaveSpawner struct {
 	TotalInWave   int
 	SpawnTimer    float64
 	NextIsBoss    bool
+	Event         WaveEvent
+	EventName     string
 }
 
 func NewWaveSpawner() *WaveSpawner {
@@ -32,6 +44,19 @@ func (ws *WaveSpawner) StartWave() {
 	if count < BaseEnemyCount {
 		count = BaseEnemyCount
 	}
+
+	ws.Event, ws.EventName = ws.determineEvent()
+
+	// Apply event count modifier
+	switch ws.Event {
+	case EventSwarmerRush:
+		count = int(float64(count) * 1.5)
+	case EventTankBrigade:
+		count = int(float64(count) * 0.6)
+	case EventBloodMoon:
+		count *= 2
+	}
+
 	ws.TotalInWave = count
 	ws.EnemiesToSpawn = count
 	ws.WaveActive = true
@@ -42,6 +67,30 @@ func (ws *WaveSpawner) StartWave() {
 		ws.EnemiesToSpawn++
 		ws.TotalInWave++
 	}
+}
+
+func (ws *WaveSpawner) determineEvent() (WaveEvent, string) {
+	if ws.IsBossWave() || ws.CurrentWave%3 != 0 {
+		return EventNone, ""
+	}
+	switch {
+	case ws.CurrentWave%12 == 0:
+		return EventBloodMoon, "BLOOD MOON"
+	case ws.CurrentWave%9 == 0:
+		return EventDasherBlitz, "DASHER BLITZ"
+	case ws.CurrentWave%6 == 0:
+		return EventTankBrigade, "TANK BRIGADE"
+	default:
+		return EventSwarmerRush, "SWARMER RUSH"
+	}
+}
+
+func (ws *WaveSpawner) CurrentSpawnInterval() float64 {
+	interval := BaseSpawnInterval / (1.0 + 0.05*float64(ws.CurrentWave-1))
+	if interval < 0.03 {
+		interval = 0.03
+	}
+	return interval
 }
 
 func (ws *WaveSpawner) IsBossWave() bool {
@@ -64,14 +113,29 @@ func (ws *WaveSpawner) SpawnNext(worldCenterX, worldCenterY float64) *entity.Ene
 }
 
 func (ws *WaveSpawner) pickEnemyType() entity.EnemyType {
-	// Wave 1-2: normal only
-	// Wave 3+: add swarmers
-	// Wave 5+: add tanks
-	// Wave 7+: add dashers
-	types := []entity.EnemyType{entity.EnemyNormal}
+	// Event overrides
+	switch ws.Event {
+	case EventSwarmerRush:
+		return entity.EnemySwarmer
+	case EventTankBrigade:
+		if rand.Float64() < 0.7 {
+			return entity.EnemyTank
+		}
+		return entity.EnemyNormal
+	case EventDasherBlitz:
+		if rand.Float64() < 0.6 {
+			return entity.EnemyDasher
+		}
+		return entity.EnemySwarmer
+	case EventBloodMoon:
+		all := []entity.EnemyType{entity.EnemyNormal, entity.EnemySwarmer, entity.EnemyTank, entity.EnemyDasher}
+		return all[rand.Intn(len(all))]
+	}
 
+	// Default wave-based mixing
+	types := []entity.EnemyType{entity.EnemyNormal}
 	if ws.CurrentWave >= 3 {
-		types = append(types, entity.EnemySwarmer, entity.EnemySwarmer) // double weight
+		types = append(types, entity.EnemySwarmer, entity.EnemySwarmer)
 	}
 	if ws.CurrentWave >= 5 {
 		types = append(types, entity.EnemyTank)
@@ -79,7 +143,6 @@ func (ws *WaveSpawner) pickEnemyType() entity.EnemyType {
 	if ws.CurrentWave >= 7 {
 		types = append(types, entity.EnemyDasher)
 	}
-
 	return types[rand.Intn(len(types))]
 }
 

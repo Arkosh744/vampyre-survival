@@ -131,3 +131,15 @@ func (e *Enemy) TakeDamage(dmg int) bool {
 func (e *Enemy) IsAlive() bool {
 	return e.HP > 0
 }
+
+// ScaleForWave increases HP (+8%/wave) and Damage (+5%/wave). Speed unchanged.
+func (e *Enemy) ScaleForWave(wave int) {
+	if wave <= 1 {
+		return
+	}
+	hpMult := 1.0 + 0.08*float64(wave-1)
+	dmgMult := 1.0 + 0.05*float64(wave-1)
+	e.HP = int(float64(e.HP) * hpMult)
+	e.MaxHP = e.HP
+	e.Damage = int(float64(e.Damage) * dmgMult)
+}
