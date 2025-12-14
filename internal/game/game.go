@@ -55,6 +55,20 @@ type Game struct {
 	DamageTaken int
 	PlayTime    float64
 	Running     bool
+
+	// Passive upgrade fields
+	MagnetRadius    float64
+	RegenRate       float64
+	RegenAccum      float64
+	ThornsDamage    int
+	LifestealAmount int
+	XPMultiplier    float64
+	CritChance      float64
+
+	// Banner system
+	BannerText  string
+	BannerTimer float64
+	BannerColor string
 }
 
 func NewGame() (*Game, error) {
@@ -183,6 +197,25 @@ func (g *Game) update(dt float64) {
 	}
 
 	g.PlayTime += dt
+
+	// Passive regen
+	if g.RegenRate > 0 && g.Player.HP < g.Player.MaxHP {
+		g.RegenAccum += g.RegenRate * dt
+		if g.RegenAccum >= 1.0 {
+			heal := int(g.RegenAccum)
+			g.RegenAccum -= float64(heal)
+			g.Player.HP += heal
+			if g.Player.HP > g.Player.MaxHP {
+				g.Player.HP = g.Player.MaxHP
+			}
+		}
+	}
+
+	// Banner decay
+	if g.BannerTimer > 0 {
+		g.BannerTimer -= dt
+	}
+
 	g.Renderer.UpdateEffects(dt)
 	g.Player.Update(dt)
 	g.clampPlayerToWorld()
@@ -194,7 +227,7 @@ func (g *Game) update(dt float64) {
 		if p.Collected {
 			continue
 		}
-		p.MagnetToward(g.Player.Body.Pos, 8.0)
+		p.MagnetToward(g.Player.Body.Pos, g.MagnetRadius)
 		p.Update(dt)
 		if p.Body.Pos.DistanceTo(g.Player.Body.Pos) < 1.5 {
 			p.Collect()
@@ -229,6 +262,12 @@ func (g *Game) update(dt float64) {
 					return
 				}
 				g.Camera.Shake(1.5)
+
+				// Thorns: damage enemy on contact
+				if g.ThornsDamage > 0 {
+					e.TakeDamage(g.ThornsDamage)
+					g.Renderer.AddDamageNumberColored(e.Body.Pos, g.ThornsDamage, ui.ColorMagenta)
+				}
 			}
 		}
 	}
@@ -237,11 +276,17 @@ func (g *Game) update(dt float64) {
 
 	if !g.WaveSpawner.WaveActive {
 		g.WaveSpawner.StartWave()
+		// Show banner for wave events
+		if g.WaveSpawner.EventName != "" {
+			g.BannerText = g.WaveSpawner.EventName
+			g.BannerTimer = 2.0
+			g.BannerColor = ui.ColorBoldRed
+		}
 	}
 
 	if g.WaveSpawner.WaveActive {
 		g.WaveSpawner.SpawnTimer += dt
-		if g.WaveSpawner.SpawnTimer >= world.SpawnInterval && !g.WaveSpawner.AllSpawned() {
+		if g.WaveSpawner.SpawnTimer >= g.WaveSpawner.CurrentSpawnInterval() && !g.WaveSpawner.AllSpawned() {
 			g.WaveSpawner.SpawnTimer = 0
 			e := g.spawnEnemyAtEdge()
 			if e != nil {
@@ -283,6 +328,12 @@ func (g *Game) render() {
 		g.Renderer.DrawPlayer(g.Player)
 		g.Renderer.DrawHUD(g.Player, g.WaveSpawner.CurrentWave, g.Kills, len(g.Weapons))
 
+		// Wave event banner
+		if g.BannerTimer > 0 && g.BannerText != "" {
+			w := g.Term.Width()
+			g.Term.WriteStr((w-len(g.BannerText))/2, 2, g.BannerText, g.BannerColor)
+		}
+
 	case StateLevelUp:
 		if g.LevelUp != nil {
 			g.LevelUp.Draw(g.Term)
@@ -313,6 +364,13 @@ func (g *Game) startGame() {
 	g.DamageDealt = 0
 	g.DamageTaken = 0
 	g.PlayTime = 0
+	g.MagnetRadius = 8.0
+	g.RegenRate = 0
+	g.RegenAccum = 0
+	g.ThornsDamage = 0
+	g.LifestealAmount = 0
+	g.XPMultiplier = 1.0
+	g.CritChance = 0
 	g.WaveSpawner = world.NewWaveSpawner()
 	g.Upgrades = skill.NewUpgradePool()
 	g.WeaponSelect = ui.NewWeaponSelectScreen()
@@ -356,15 +414,34 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 	if !e.IsAlive() {
 		return
 	}
-	g.DamageDealt += hit.Damage
-	dead := e.TakeDamage(hit.Damage)
+	dmg := hit.Damage
+	isCrit := false
+	if g.CritChance > 0 && rand.Float64() < g.CritChance {
+		dmg *= 2
+		isCrit = true
+	}
 
-	g.Renderer.AddDamageNumber(e.Body.Pos, hit.Damage)
+	g.DamageDealt += dmg
+	dead := e.TakeDamage(dmg)
+
+	if isCrit {
+		g.Renderer.AddDamageNumberColored(e.Body.Pos, dmg, ui.ColorBoldRed)
+	} else {
+		g.Renderer.AddDamageNumber(e.Body.Pos, dmg)
+	}
 
 	if dead {
 		g.Kills++
 		g.Player.Kills++
 		g.Camera.Shake(0.5)
+
+		// Lifesteal: heal on kill
+		if g.LifestealAmount > 0 {
+			g.Player.HP += g.LifestealAmount
+			if g.Player.HP > g.Player.MaxHP {
+				g.Player.HP = g.Player.MaxHP
+			}
+		}
 
 		// Death particles
 		g.spawnDeathParticles(e)
@@ -372,7 +449,11 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 		// HP drop chance
 		g.trySpawnHPDrop(e)
 
-		leveled := g.Player.AddXP(e.XPDrop)
+		xp := int(float64(e.XPDrop) * g.XPMultiplier)
+		if xp < 1 {
+			xp = 1
+		}
+		leveled := g.Player.AddXP(xp)
 		if leveled {
 			g.showLevelUp()
 		}
@@ -422,6 +503,27 @@ func (g *Game) applyUpgrade(upg skill.Upgrade) {
 		g.Player.AddMaxHP(int(upg.Value))
 	case skill.UpgPlayerSpeed:
 		g.Player.AddSpeed(upg.Value)
+	case skill.UpgMagnet:
+		g.MagnetRadius += upg.Value
+	case skill.UpgRegen:
+		g.RegenRate += upg.Value
+	case skill.UpgThorns:
+		g.ThornsDamage += int(upg.Value)
+	case skill.UpgLifesteal:
+		g.LifestealAmount += int(upg.Value)
+	case skill.UpgXPBonus:
+		g.XPMultiplier += upg.Value
+	case skill.UpgInvuln:
+		g.Player.InvulnBonus += upg.Value
+	case skill.UpgCrit:
+		g.CritChance += upg.Value
+		if g.CritChance > 0.5 {
+			g.CritChance = 0.5
+		}
+	case skill.UpgPierce:
+		for _, w := range g.Weapons {
+			w.AddPierce(int(upg.Value))
+		}
 	}
 }
 
@@ -529,6 +631,13 @@ func (g *Game) spawnEnemyAtEdge() *entity.Enemy {
 	e := g.WaveSpawner.SpawnNext(g.Player.Body.Pos.X, g.Player.Body.Pos.Y)
 	if e == nil {
 		return nil
+	}
+	e.ScaleForWave(g.WaveSpawner.CurrentWave)
+
+	// Blood Moon: extra HP scaling
+	if g.WaveSpawner.Event == world.EventBloodMoon {
+		e.HP = int(float64(e.HP) * 1.5)
+		e.MaxHP = e.HP
 	}
 
 	side := rand.Intn(4)
