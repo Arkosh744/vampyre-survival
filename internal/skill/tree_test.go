@@ -72,3 +72,51 @@ func Test_UpgradePool_AlwaysHasPlayerUpgrades(t *testing.T) {
 	require.True(t, hasHP)
 	require.True(t, hasSpeed)
 }
+
+func Test_UpgradePool_HasPassiveUpgrades(t *testing.T) {
+	p := NewUpgradePool()
+	choices := p.GetRandomChoices(50, []weapon.WeaponKind{weapon.KindSword})
+
+	passiveTypes := map[UpgradeType]bool{
+		UpgMagnet:    false,
+		UpgRegen:     false,
+		UpgThorns:    false,
+		UpgLifesteal: false,
+		UpgXPBonus:   false,
+		UpgInvuln:    false,
+		UpgCrit:      false,
+		UpgPierce:    false,
+	}
+	for _, c := range choices {
+		if _, ok := passiveTypes[c.Type]; ok {
+			passiveTypes[c.Type] = true
+		}
+	}
+	for typ, found := range passiveTypes {
+		require.True(t, found, "passive upgrade type %d should be in pool", typ)
+	}
+}
+
+func Test_UpgradePool_PassiveCount(t *testing.T) {
+	p := NewUpgradePool()
+	// Request all available upgrades (large count)
+	choices := p.GetRandomChoices(50, []weapon.WeaponKind{weapon.KindSword})
+
+	passiveTypes := map[UpgradeType]bool{
+		UpgMagnet:    true,
+		UpgRegen:     true,
+		UpgThorns:    true,
+		UpgLifesteal: true,
+		UpgXPBonus:   true,
+		UpgInvuln:    true,
+		UpgCrit:      true,
+		UpgPierce:    true,
+	}
+	count := 0
+	for _, c := range choices {
+		if passiveTypes[c.Type] {
+			count++
+		}
+	}
+	require.Equal(t, 8, count, "should have exactly 8 passive upgrades with 1 weapon owned")
+}

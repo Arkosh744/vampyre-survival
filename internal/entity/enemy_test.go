@@ -92,3 +92,48 @@ func Test_Enemy_IsAlive(t *testing.T) {
 	e.HP = 0
 	require.False(t, e.IsAlive())
 }
+
+func Test_ScaleForWave_Wave1_NoChange(t *testing.T) {
+	e := NewEnemy(EnemyNormal, 0, 0)
+	origHP := e.HP
+	origDmg := e.Damage
+	origSpeed := e.Speed
+
+	e.ScaleForWave(1)
+
+	require.Equal(t, origHP, e.HP, "HP should not change on wave 1")
+	require.Equal(t, origDmg, e.Damage, "Damage should not change on wave 1")
+	require.Equal(t, origSpeed, e.Speed, "Speed should not change on wave 1")
+}
+
+func Test_ScaleForWave_Wave10(t *testing.T) {
+	e := NewEnemy(EnemyNormal, 0, 0)
+	// Normal: HP=15, Damage=10
+	require.Equal(t, 15, e.HP)
+	require.Equal(t, 10, e.Damage)
+
+	e.ScaleForWave(10)
+
+	// hpMult = 1 + 0.08*9 = 1.72 -> int(15 * 1.72) = int(25.8) = 25
+	// dmgMult = 1 + 0.05*9 = 1.45 -> int(10 * 1.45) = int(14.5) = 14
+	require.Equal(t, 25, e.HP)
+	require.Equal(t, 25, e.MaxHP)
+	require.Equal(t, 14, e.Damage)
+}
+
+func Test_ScaleForWave_Boss(t *testing.T) {
+	e := NewEnemy(EnemyBoss, 0, 0)
+	// Boss: HP=80, Damage=20
+	require.Equal(t, 80, e.HP)
+	require.Equal(t, 20, e.Damage)
+	origSpeed := e.Speed
+
+	e.ScaleForWave(10)
+
+	// hpMult = 1.72 -> int(80 * 1.72) = int(137.6) = 137
+	// dmgMult = 1.45 -> int(20 * 1.45) = int(29.0) = 29
+	require.Equal(t, 137, e.HP)
+	require.Equal(t, 137, e.MaxHP)
+	require.Equal(t, 29, e.Damage)
+	require.Equal(t, origSpeed, e.Speed, "Speed should not change from scaling")
+}

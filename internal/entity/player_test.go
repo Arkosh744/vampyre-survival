@@ -100,3 +100,23 @@ func Test_Player_AddSpeed(t *testing.T) {
 	p.AddSpeed(2.0)
 	require.Equal(t, oldSpeed+2.0, p.Body.MaxSpeed)
 }
+
+func Test_Player_InvulnBonus(t *testing.T) {
+	// Player without bonus
+	p1 := NewPlayer(0, 0)
+	p1.TakeDamage(10)
+	require.True(t, p1.Invulnerable)
+	baseTimer := p1.InvulnTimer
+	require.Equal(t, InvulnDuration, baseTimer)
+
+	// Player with InvulnBonus=0.5
+	p2 := NewPlayer(0, 0)
+	p2.InvulnBonus = 0.5
+	p2.TakeDamage(10)
+	require.True(t, p2.Invulnerable)
+	bonusTimer := p2.InvulnTimer
+	require.Equal(t, InvulnDuration+0.5, bonusTimer)
+
+	// Bonus timer should be longer
+	require.Greater(t, bonusTimer, baseTimer, "InvulnBonus should increase invulnerability duration")
+}

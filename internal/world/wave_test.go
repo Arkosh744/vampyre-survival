@@ -72,3 +72,64 @@ func Test_WaveSpawner_WaveComplete(t *testing.T) {
 	}
 	require.True(t, ws.AllSpawned())
 }
+
+func Test_WaveEvent_Wave3_SwarmerRush(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = 3
+	ws.StartWave()
+	require.Equal(t, EventSwarmerRush, ws.Event)
+	require.Equal(t, "SWARMER RUSH", ws.EventName)
+}
+
+func Test_WaveEvent_Wave6_TankBrigade(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = 6
+	ws.StartWave()
+	require.Equal(t, EventTankBrigade, ws.Event)
+	require.Equal(t, "TANK BRIGADE", ws.EventName)
+}
+
+func Test_WaveEvent_Wave9_DasherBlitz(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = 9
+	ws.StartWave()
+	require.Equal(t, EventDasherBlitz, ws.Event)
+	require.Equal(t, "DASHER BLITZ", ws.EventName)
+}
+
+func Test_WaveEvent_Wave12_BloodMoon(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = 12
+	ws.StartWave()
+	require.Equal(t, EventBloodMoon, ws.Event)
+	require.Equal(t, "BLOOD MOON", ws.EventName)
+}
+
+func Test_WaveEvent_BossWave_NoEvent(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = 5
+	ws.StartWave()
+	require.Equal(t, EventNone, ws.Event)
+	require.Equal(t, "", ws.EventName)
+}
+
+func Test_CurrentSpawnInterval_Decreases(t *testing.T) {
+	ws := NewWaveSpawner()
+
+	ws.CurrentWave = 1
+	interval1 := ws.CurrentSpawnInterval()
+
+	ws.CurrentWave = 10
+	interval10 := ws.CurrentSpawnInterval()
+
+	require.Less(t, interval10, interval1, "spawn interval should decrease at higher waves")
+}
+
+func Test_CurrentSpawnInterval_MinFloor(t *testing.T) {
+	ws := NewWaveSpawner()
+	// At very high wave, interval should never go below 0.03
+	ws.CurrentWave = 200
+	interval := ws.CurrentSpawnInterval()
+	require.GreaterOrEqual(t, interval, 0.03, "spawn interval should never go below 0.03")
+	require.Equal(t, 0.03, interval)
+}

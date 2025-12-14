@@ -58,3 +58,26 @@ func Test_ProjectileGun_BulletExpires(t *testing.T) {
 	pg.Update(0.1, physics.Vec2{}, nil)
 	require.Equal(t, 0, len(pg.Bullets))
 }
+
+func Test_ProjectileGun_Pierce(t *testing.T) {
+	pg := NewProjectileGun()
+	// Create a bullet with Pierce=1 right on top of target
+	pg.Bullets = append(pg.Bullets, Bullet{
+		Body:   physics.Body{Pos: physics.Vec2{X: 20, Y: 0}, Width: 1, Height: 1},
+		Damage: 10,
+		TTL:    5,
+		Pierce: 1,
+	})
+	targets := []Target{{Pos: physics.Vec2{X: 20, Y: 0}, ID: 42}}
+
+	pg.checkBulletHits(targets)
+	hits := pg.GetHits()
+
+	// Bullet should hit the target
+	require.Equal(t, 1, len(hits))
+	require.Equal(t, 42, hits[0].TargetID)
+
+	// Bullet should still exist (pierce consumed but bullet not removed)
+	require.Equal(t, 1, len(pg.Bullets), "bullet with pierce should survive after hit")
+	require.Equal(t, 0, pg.Bullets[0].Pierce, "pierce count should be decremented")
+}
