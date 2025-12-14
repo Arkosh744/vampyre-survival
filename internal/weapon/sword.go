@@ -87,3 +87,4 @@ func (s *Sword) Kind() WeaponKind            { return KindSword }
 func (s *Sword) AddDamage(v int)             { s.damage += v }
 func (s *Sword) MultiplyCooldown(f float64)  { s.cooldown *= f }
 func (s *Sword) AddRange(v float64)          { s.attackRange += v }
+func (s *Sword) AddPierce(_ int)             {}

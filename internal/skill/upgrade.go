@@ -15,6 +15,14 @@ const (
 	UpgNewWeapon
 	UpgPlayerHP
 	UpgPlayerSpeed
+	UpgMagnet
+	UpgRegen
+	UpgThorns
+	UpgLifesteal
+	UpgXPBonus
+	UpgInvuln
+	UpgCrit
+	UpgPierce
 )
 
 type Upgrade struct {
@@ -91,6 +99,18 @@ func (p *UpgradePool) buildPool(ownedWeapons []weapon.WeaponKind) []Upgrade {
 	pool = append(pool,
 		Upgrade{Name: "Max HP +20", Description: "Increase max health and heal", Type: UpgPlayerHP, Value: 20},
 		Upgrade{Name: "Speed +2", Description: "Increase movement speed", Type: UpgPlayerSpeed, Value: 2},
+	)
+
+	// Passive upgrades — always available
+	pool = append(pool,
+		Upgrade{Name: "Magnet +4", Description: "Pick up items from further", Type: UpgMagnet, Value: 4},
+		Upgrade{Name: "Regen +1 HP/s", Description: "Slow passive heal", Type: UpgRegen, Value: 1},
+		Upgrade{Name: "Thorns +5", Description: "Damage enemies on contact", Type: UpgThorns, Value: 5},
+		Upgrade{Name: "Lifesteal +2", Description: "Heal on kill", Type: UpgLifesteal, Value: 2},
+		Upgrade{Name: "XP Bonus +25%", Description: "More XP per orb", Type: UpgXPBonus, Value: 0.25},
+		Upgrade{Name: "Invuln +0.3s", Description: "Longer invulnerability", Type: UpgInvuln, Value: 0.3},
+		Upgrade{Name: "Crit +10%", Description: "Chance for double damage", Type: UpgCrit, Value: 0.10},
+		Upgrade{Name: "Pierce +1", Description: "Bullets pass through", Type: UpgPierce, Value: 1},
 	)
 
 	return pool

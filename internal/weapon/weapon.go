@@ -30,6 +30,7 @@ type Weapon interface {
 	AddDamage(v int)
 	MultiplyCooldown(factor float64)
 	AddRange(v float64)
+	AddPierce(v int)
 }
 
 type Visual struct {

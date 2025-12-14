@@ -23,6 +23,7 @@ type ProjectileGun struct {
 	cooldownTimer float64
 	cooldown      float64
 	damage        int
+	pierce        int
 	Bullets       []Bullet
 	hits          []HitResult
 	visuals       []Visual
@@ -75,6 +76,7 @@ func (pg *ProjectileGun) Update(dt float64, ownerPos physics.Vec2, targets []Tar
 		Dir:    dir,
 		Damage: pg.damage,
 		TTL:    ProjTTL,
+		Pierce: pg.pierce,
 	})
 	pg.cooldownTimer = pg.cooldown
 }
@@ -84,7 +86,11 @@ func (pg *ProjectileGun) checkBulletHits(targets []Target) {
 		for _, t := range targets {
 			if pg.Bullets[i].Body.Pos.DistanceTo(t.Pos) < ProjHitRadius {
 				pg.hits = append(pg.hits, HitResult{TargetID: t.ID, Damage: pg.Bullets[i].Damage})
-				pg.Bullets = append(pg.Bullets[:i], pg.Bullets[i+1:]...)
+				if pg.Bullets[i].Pierce > 0 {
+					pg.Bullets[i].Pierce--
+				} else {
+					pg.Bullets = append(pg.Bullets[:i], pg.Bullets[i+1:]...)
+				}
 				break
 			}
 		}
@@ -109,3 +115,4 @@ func (pg *ProjectileGun) Kind() WeaponKind            { return KindProjectile }
 func (pg *ProjectileGun) AddDamage(v int)             { pg.damage += v }
 func (pg *ProjectileGun) MultiplyCooldown(f float64)  { pg.cooldown *= f }
 func (pg *ProjectileGun) AddRange(v float64)          { _ = v } // range is TTL-based, no direct range field
+func (pg *ProjectileGun) AddPierce(v int)              { pg.pierce += v }

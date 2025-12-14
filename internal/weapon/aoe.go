@@ -64,3 +64,4 @@ func (a *AoE) Kind() WeaponKind            { return KindAoE }
 func (a *AoE) AddDamage(v int)             { a.damage += v }
 func (a *AoE) MultiplyCooldown(f float64)  { a.cooldown *= f }
 func (a *AoE) AddRange(v float64)          { a.radius += v }
+func (a *AoE) AddPierce(_ int)             {}

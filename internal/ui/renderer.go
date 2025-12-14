@@ -137,10 +137,14 @@ func (r *Renderer) DrawWeaponVisuals(visuals []weapon.Visual) {
 }
 
 func (r *Renderer) AddDamageNumber(pos physics.Vec2, damage int) {
+	r.AddDamageNumberColored(pos, damage, ColorYellow)
+}
+
+func (r *Renderer) AddDamageNumberColored(pos physics.Vec2, damage int, color string) {
 	r.TextEffects = append(r.TextEffects, TextEffect{
 		Pos:   pos,
 		Text:  strconv.Itoa(damage),
-		Color: ColorYellow,
+		Color: color,
 		TTL:   0.5,
 		VelY:  -3,
 	})

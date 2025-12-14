@@ -26,6 +26,7 @@ type Player struct {
 	Direction    physics.Vec2
 	Invulnerable bool
 	InvulnTimer  float64
+	InvulnBonus  float64
 }
 
 func NewPlayer(x, y float64) *Player {
@@ -72,7 +73,7 @@ func (p *Player) TakeDamage(dmg int) bool {
 		return true
 	}
 	p.Invulnerable = true
-	p.InvulnTimer = InvulnDuration
+	p.InvulnTimer = InvulnDuration + p.InvulnBonus
 	return false
 }
 
