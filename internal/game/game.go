@@ -67,6 +67,8 @@ type Game struct {
 	BannerText  string
 	BannerTimer float64
 	BannerColor string
+
+	Combo *Combo
 }
 
 func NewGame() (*Game, error) {
@@ -195,6 +197,7 @@ func (g *Game) update(dt float64) {
 	}
 
 	g.PlayTime += dt
+	g.Combo.Update(dt)
 
 	// Passive regen
 	if g.RegenRate > 0 && g.Player.HP < g.Player.MaxHP {
@@ -318,7 +321,19 @@ func (g *Game) render() {
 		}
 		g.Renderer.DrawEffects()
 		g.Renderer.DrawPlayer(g.Player)
-		g.Renderer.DrawHUD(g.Player, g.WaveSpawner.CurrentWave, g.Kills, len(g.Weapons))
+		g.Renderer.DrawHUD(g.Player, g.WaveSpawner.CurrentWave, g.Kills, len(g.Weapons), g.Combo.Count)
+
+		// Combo label banner
+		if label := g.Combo.Label(); label != "" {
+			comboColor := ui.ColorYellow
+			if g.Combo.Count >= 20 {
+				comboColor = ui.ColorBoldRed
+			} else if g.Combo.Count >= 10 {
+				comboColor = ui.ColorMagenta
+			}
+			w := g.Term.Width()
+			g.Term.WriteStr((w-len(label))/2, 3, label, comboColor)
+		}
 
 		// Wave event banner
 		if g.BannerTimer > 0 && g.BannerText != "" {
@@ -362,6 +377,7 @@ func (g *Game) startGame() {
 	g.XPMultiplier = 1.0
 	g.CritChance = 0
 	g.WaveSpawner = world.NewWaveSpawner()
+	g.Combo = NewCombo()
 	g.Upgrades = skill.NewUpgradePool()
 	g.WeaponSelect = ui.NewWeaponSelectScreen()
 	g.State = StateWeaponSelect
@@ -404,7 +420,7 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 	if !e.IsAlive() {
 		return
 	}
-	dmg := hit.Damage
+	dmg := int(float64(hit.Damage) * g.Combo.DamageMult())
 	isCrit := false
 	if g.CritChance > 0 && rand.Float64() < g.CritChance {
 		dmg *= 2
@@ -423,6 +439,7 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 	if dead {
 		g.Kills++
 		g.Player.Kills++
+		g.Combo.RegisterKill()
 		g.Camera.Shake(0.5)
 
 		// Lifesteal: heal on kill
@@ -439,7 +456,7 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 		// HP drop chance
 		g.trySpawnHPDrop(e)
 
-		xp := int(float64(e.XPDrop) * g.XPMultiplier)
+		xp := int(float64(e.XPDrop) * g.XPMultiplier * g.Combo.XPMult())
 		if xp < 1 {
 			xp = 1
 		}
@@ -681,6 +698,7 @@ func (g *Game) renderGameOver() {
 		{label: fmt.Sprintf("Damage Dealt: %d", g.DamageDealt), color: ui.ColorGreen},
 		{label: fmt.Sprintf("Damage Taken: %d", g.DamageTaken), color: ui.ColorMagenta},
 		{label: fmt.Sprintf("Weapons: %d", len(g.Weapons)), color: ui.ColorWhite},
+		{label: fmt.Sprintf("Best Streak: %d", g.Combo.BestStreak), color: ui.ColorYellow},
 	}
 
 	for i, s := range stats {

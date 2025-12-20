@@ -207,8 +207,9 @@ func (r *Renderer) drawBorderCell(pos physics.Vec2) {
 	r.Term.SetCell(sx, sy, '#', ColorWhite)
 }
 
-func (r *Renderer) DrawHUD(p *entity.Player, wave int, kills int, weaponCount int) {
+func (r *Renderer) DrawHUD(p *entity.Player, wave int, kills int, weaponCount int, comboCount int) {
 	h := r.Term.Height()
+	w := r.Term.Width()
 
 	hpBar := renderBar(p.HP, p.MaxHP, 20)
 	xpBar := renderBar(p.XP, p.XPToNextLevel(), 20)
@@ -216,6 +217,17 @@ func (r *Renderer) DrawHUD(p *entity.Player, wave int, kills int, weaponCount in
 	r.Term.WriteStr(0, h-3, fmt.Sprintf("HP: %s %d/%d", hpBar, p.HP, p.MaxHP), ColorRed)
 	r.Term.WriteStr(0, h-2, fmt.Sprintf("XP: %s Lv.%d", xpBar, p.Level), ColorCyan)
 	r.Term.WriteStr(0, h-1, fmt.Sprintf("Wave: %d  Kills: %d  Weapons: %d", wave, kills, weaponCount), ColorWhite)
+
+	if comboCount >= 5 {
+		comboStr := fmt.Sprintf("COMBO: x%d", comboCount)
+		color := ColorYellow
+		if comboCount >= 20 {
+			color = ColorBoldRed
+		} else if comboCount >= 10 {
+			color = ColorMagenta
+		}
+		r.Term.WriteStr(w-len(comboStr), h-3, comboStr, color)
+	}
 }
 
 func renderBar(current, max, width int) string {
