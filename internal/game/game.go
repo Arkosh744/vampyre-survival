@@ -57,10 +57,8 @@ type Game struct {
 	Running     bool
 
 	// Passive upgrade fields
-	MagnetRadius    float64
 	RegenRate       float64
 	RegenAccum      float64
-	ThornsDamage    int
 	LifestealAmount int
 	XPMultiplier    float64
 	CritChance      float64
@@ -227,7 +225,7 @@ func (g *Game) update(dt float64) {
 		if p.Collected {
 			continue
 		}
-		p.MagnetToward(g.Player.Body.Pos, g.MagnetRadius)
+		p.MagnetToward(g.Player.Body.Pos, 8.0)
 		p.Update(dt)
 		if p.Body.Pos.DistanceTo(g.Player.Body.Pos) < 1.5 {
 			p.Collect()
@@ -262,12 +260,6 @@ func (g *Game) update(dt float64) {
 					return
 				}
 				g.Camera.Shake(1.5)
-
-				// Thorns: damage enemy on contact
-				if g.ThornsDamage > 0 {
-					e.TakeDamage(g.ThornsDamage)
-					g.Renderer.AddDamageNumberColored(e.Body.Pos, g.ThornsDamage, ui.ColorMagenta)
-				}
 			}
 		}
 	}
@@ -364,10 +356,8 @@ func (g *Game) startGame() {
 	g.DamageDealt = 0
 	g.DamageTaken = 0
 	g.PlayTime = 0
-	g.MagnetRadius = 8.0
 	g.RegenRate = 0
 	g.RegenAccum = 0
-	g.ThornsDamage = 0
 	g.LifestealAmount = 0
 	g.XPMultiplier = 1.0
 	g.CritChance = 0
@@ -503,12 +493,8 @@ func (g *Game) applyUpgrade(upg skill.Upgrade) {
 		g.Player.AddMaxHP(int(upg.Value))
 	case skill.UpgPlayerSpeed:
 		g.Player.AddSpeed(upg.Value)
-	case skill.UpgMagnet:
-		g.MagnetRadius += upg.Value
 	case skill.UpgRegen:
 		g.RegenRate += upg.Value
-	case skill.UpgThorns:
-		g.ThornsDamage += int(upg.Value)
 	case skill.UpgLifesteal:
 		g.LifestealAmount += int(upg.Value)
 	case skill.UpgXPBonus:

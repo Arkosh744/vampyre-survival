@@ -127,9 +127,9 @@ func Test_CurrentSpawnInterval_Decreases(t *testing.T) {
 
 func Test_CurrentSpawnInterval_MinFloor(t *testing.T) {
 	ws := NewWaveSpawner()
-	// At very high wave, interval should never go below 0.03
+	// At very high wave, interval should never go below 0.015
 	ws.CurrentWave = 200
 	interval := ws.CurrentSpawnInterval()
-	require.GreaterOrEqual(t, interval, 0.03, "spawn interval should never go below 0.03")
-	require.Equal(t, 0.03, interval)
+	require.GreaterOrEqual(t, interval, 0.015, "spawn interval should never go below 0.015")
+	require.Equal(t, 0.015, interval)
 }

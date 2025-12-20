@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	BaseEnemyCount   = 20
+	BaseEnemyCount   = 100
 	WaveScaling      = 1.2
 	BossEveryN       = 5
 	BaseSpawnInterval = 0.1
@@ -87,8 +87,8 @@ func (ws *WaveSpawner) determineEvent() (WaveEvent, string) {
 
 func (ws *WaveSpawner) CurrentSpawnInterval() float64 {
 	interval := BaseSpawnInterval / (1.0 + 0.05*float64(ws.CurrentWave-1))
-	if interval < 0.03 {
-		interval = 0.03
+	if interval < 0.015 {
+		interval = 0.015
 	}
 	return interval
 }

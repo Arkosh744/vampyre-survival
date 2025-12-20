@@ -3,9 +3,9 @@ package weapon
 import "github.com/arkosh/vampyre-survival/internal/physics"
 
 const (
-	SwordBaseRange    = 5.0
-	SwordBaseDamage   = 25
-	SwordBaseCooldown = 0.3
+	SwordBaseRange    = 6.0
+	SwordBaseDamage   = 30
+	SwordBaseCooldown = 0.28
 )
 
 type Sword struct {

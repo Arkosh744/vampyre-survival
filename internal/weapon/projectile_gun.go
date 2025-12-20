@@ -3,10 +3,10 @@ package weapon
 import "github.com/arkosh/vampyre-survival/internal/physics"
 
 const (
-	ProjBaseDamage   = 20
-	ProjBaseCooldown = 0.2
-	ProjSpeed        = 25.0
-	ProjTTL          = 0.8
+	ProjBaseDamage   = 15
+	ProjBaseCooldown = 0.25
+	ProjSpeed        = 30.0
+	ProjTTL          = 0.85
 	ProjHitRadius    = 1.5
 )
 
@@ -107,8 +107,8 @@ func (pg *ProjectileGun) GetVisuals() []Visual {
 func (pg *ProjectileGun) Level() int { return pg.level }
 func (pg *ProjectileGun) Upgrade() {
 	pg.level++
-	pg.damage += 5
-	pg.cooldown *= 0.85
+	pg.damage += 4
+	pg.cooldown *= 0.88
 }
 
 func (pg *ProjectileGun) Kind() WeaponKind            { return KindProjectile }

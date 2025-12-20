@@ -13,8 +13,8 @@ const (
 )
 
 const (
-	DasherIdleSpeed  = 3.0
-	DasherDashSpeed  = 20.0
+	DasherIdleSpeed  = 6.0
+	DasherDashSpeed  = 40.0
 	DasherDashRange  = 15.0
 )
 
@@ -37,11 +37,11 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 		e.HP = 80
 		e.MaxHP = 80
 		e.Damage = 20
-		e.Speed = 6.0
+		e.Speed = 12.0
 		e.XPDrop = 10
 		e.Body = physics.Body{
 			Pos:      physics.Vec2{X: x, Y: y},
-			MaxSpeed: 6.0,
+			MaxSpeed: 12.0,
 			Width:    3,
 			Height:   3,
 		}
@@ -49,11 +49,11 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 		e.HP = 5
 		e.MaxHP = 5
 		e.Damage = 3
-		e.Speed = 8.0
+		e.Speed = 16.0
 		e.XPDrop = 1
 		e.Body = physics.Body{
 			Pos:      physics.Vec2{X: x, Y: y},
-			MaxSpeed: 8.0,
+			MaxSpeed: 16.0,
 			Width:    1,
 			Height:   1,
 		}
@@ -61,11 +61,11 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 		e.HP = 60
 		e.MaxHP = 60
 		e.Damage = 15
-		e.Speed = 2.0
+		e.Speed = 4.0
 		e.XPDrop = 5
 		e.Body = physics.Body{
 			Pos:      physics.Vec2{X: x, Y: y},
-			MaxSpeed: 2.0,
+			MaxSpeed: 4.0,
 			Width:    2,
 			Height:   2,
 		}
@@ -85,11 +85,11 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 		e.HP = 15
 		e.MaxHP = 15
 		e.Damage = 10
-		e.Speed = 4.5
+		e.Speed = 9.0
 		e.XPDrop = 1
 		e.Body = physics.Body{
 			Pos:      physics.Vec2{X: x, Y: y},
-			MaxSpeed: 4.5,
+			MaxSpeed: 9.0,
 			Width:    1,
 			Height:   1,
 		}

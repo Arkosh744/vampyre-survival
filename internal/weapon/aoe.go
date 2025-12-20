@@ -3,9 +3,9 @@ package weapon
 import "github.com/arkosh/vampyre-survival/internal/physics"
 
 const (
-	AoEBaseRadius   = 8.0
-	AoEBaseDamage   = 15
-	AoEBaseCooldown = 0.8
+	AoEBaseRadius   = 10.0
+	AoEBaseDamage   = 22
+	AoEBaseCooldown = 0.55
 )
 
 type AoE struct {
@@ -55,9 +55,9 @@ func (a *AoE) GetVisuals() []Visual  { return a.visuals }
 func (a *AoE) Level() int            { return a.level }
 func (a *AoE) Upgrade() {
 	a.level++
-	a.damage += 3
-	a.radius += 1.0
-	a.cooldown *= 0.9
+	a.damage += 5
+	a.radius += 1.5
+	a.cooldown *= 0.88
 }
 
 func (a *AoE) Kind() WeaponKind            { return KindAoE }

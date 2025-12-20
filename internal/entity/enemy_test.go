@@ -28,7 +28,7 @@ func Test_Enemy_NewSwarmer(t *testing.T) {
 	require.Equal(t, EnemySwarmer, e.Type)
 	require.Equal(t, 5, e.HP)
 	require.Equal(t, 3, e.Damage)
-	require.Equal(t, 8.0, e.Speed)
+	require.Equal(t, 16.0, e.Speed)
 	require.Equal(t, 1, e.XPDrop)
 }
 
@@ -37,7 +37,7 @@ func Test_Enemy_NewTank(t *testing.T) {
 	require.Equal(t, EnemyTank, e.Type)
 	require.Equal(t, 60, e.HP)
 	require.Equal(t, 15, e.Damage)
-	require.Equal(t, 2.0, e.Speed)
+	require.Equal(t, 4.0, e.Speed)
 	require.Equal(t, 5, e.XPDrop)
 }
 

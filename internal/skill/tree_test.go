@@ -75,12 +75,10 @@ func Test_UpgradePool_AlwaysHasPlayerUpgrades(t *testing.T) {
 
 func Test_UpgradePool_HasPassiveUpgrades(t *testing.T) {
 	p := NewUpgradePool()
-	choices := p.GetRandomChoices(50, []weapon.WeaponKind{weapon.KindSword})
+	choices := p.GetRandomChoices(50, []weapon.WeaponKind{weapon.KindProjectile})
 
 	passiveTypes := map[UpgradeType]bool{
-		UpgMagnet:    false,
 		UpgRegen:     false,
-		UpgThorns:    false,
 		UpgLifesteal: false,
 		UpgXPBonus:   false,
 		UpgInvuln:    false,
@@ -97,15 +95,32 @@ func Test_UpgradePool_HasPassiveUpgrades(t *testing.T) {
 	}
 }
 
-func Test_UpgradePool_PassiveCount(t *testing.T) {
+func Test_UpgradePool_PassiveCount_SwordOnly(t *testing.T) {
 	p := NewUpgradePool()
-	// Request all available upgrades (large count)
 	choices := p.GetRandomChoices(50, []weapon.WeaponKind{weapon.KindSword})
 
 	passiveTypes := map[UpgradeType]bool{
-		UpgMagnet:    true,
 		UpgRegen:     true,
-		UpgThorns:    true,
+		UpgLifesteal: true,
+		UpgXPBonus:   true,
+		UpgInvuln:    true,
+		UpgCrit:      true,
+	}
+	count := 0
+	for _, c := range choices {
+		if passiveTypes[c.Type] {
+			count++
+		}
+	}
+	require.Equal(t, 5, count, "sword-only: 5 passives (no Pierce without Projectile)")
+}
+
+func Test_UpgradePool_PassiveCount_WithProjectile(t *testing.T) {
+	p := NewUpgradePool()
+	choices := p.GetRandomChoices(50, []weapon.WeaponKind{weapon.KindProjectile})
+
+	passiveTypes := map[UpgradeType]bool{
+		UpgRegen:     true,
 		UpgLifesteal: true,
 		UpgXPBonus:   true,
 		UpgInvuln:    true,
@@ -118,5 +133,5 @@ func Test_UpgradePool_PassiveCount(t *testing.T) {
 			count++
 		}
 	}
-	require.Equal(t, 8, count, "should have exactly 8 passive upgrades with 1 weapon owned")
+	require.Equal(t, 6, count, "with projectile: 6 passives (includes Pierce)")
 }
