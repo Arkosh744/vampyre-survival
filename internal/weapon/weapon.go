@@ -18,6 +18,7 @@ const (
 	KindSword      WeaponKind = "sword"
 	KindProjectile WeaponKind = "projectile"
 	KindAoE        WeaponKind = "aoe"
+	KindLightning  WeaponKind = "lightning"
 )
 
 type Weapon interface {

@@ -37,7 +37,7 @@ type UpgradePool struct {
 
 func NewUpgradePool() *UpgradePool {
 	return &UpgradePool{
-		allWeaponKinds: []weapon.WeaponKind{weapon.KindSword, weapon.KindProjectile, weapon.KindAoE},
+		allWeaponKinds: []weapon.WeaponKind{weapon.KindSword, weapon.KindProjectile, weapon.KindAoE, weapon.KindLightning},
 	}
 }
 
@@ -108,8 +108,8 @@ func (p *UpgradePool) buildPool(ownedWeapons []weapon.WeaponKind) []Upgrade {
 		Upgrade{Name: "Crit +10%", Description: "Chance for double damage", Type: UpgCrit, Value: 0.10},
 	)
 
-	// Pierce — only if player owns projectile weapon
-	if owned[weapon.KindProjectile] {
+	// Pierce — only if player owns projectile or lightning weapon
+	if owned[weapon.KindProjectile] || owned[weapon.KindLightning] {
 		pool = append(pool, Upgrade{Name: "Pierce +1", Description: "Bullets pass through", Type: UpgPierce, Value: 1})
 	}
 
@@ -124,6 +124,8 @@ func weaponDisplayName(k weapon.WeaponKind) string {
 		return "Projectile"
 	case weapon.KindAoE:
 		return "Pulse"
+	case weapon.KindLightning:
+		return "Lightning"
 	default:
 		return string(k)
 	}
