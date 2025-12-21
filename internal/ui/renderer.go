@@ -127,12 +127,23 @@ func (r *Renderer) DrawPickup(p *entity.Pickup) {
 
 func (r *Renderer) DrawWeaponVisuals(visuals []weapon.Visual) {
 	for _, v := range visuals {
-		r.Effects = append(r.Effects, VisualEffect{
-			Pos:   v.Pos,
-			Char:  v.Char,
-			Color: ColorYellow,
-			TTL:   0.3,
-		})
+		color := ColorYellow
+		switch v.Char {
+		case 'z', '~':
+			color = ColorCyan
+		case '●':
+			color = ColorMagenta
+		}
+		if v.TTL <= 0 {
+			if r.Camera.IsVisible(v.Pos) {
+				sx, sy := r.Camera.WorldToScreen(v.Pos)
+				r.Term.SetCell(sx, sy, v.Char, color)
+			}
+		} else {
+			r.Effects = append(r.Effects, VisualEffect{
+				Pos: v.Pos, Char: v.Char, Color: color, TTL: v.TTL,
+			})
+		}
 	}
 }
 

@@ -37,7 +37,7 @@ type UpgradePool struct {
 
 func NewUpgradePool() *UpgradePool {
 	return &UpgradePool{
-		allWeaponKinds: []weapon.WeaponKind{weapon.KindSword, weapon.KindProjectile, weapon.KindAoE, weapon.KindLightning},
+		allWeaponKinds: []weapon.WeaponKind{weapon.KindSword, weapon.KindProjectile, weapon.KindAoE, weapon.KindLightning, weapon.KindOrbital},
 	}
 }
 
@@ -126,6 +126,8 @@ func weaponDisplayName(k weapon.WeaponKind) string {
 		return "Pulse"
 	case weapon.KindLightning:
 		return "Lightning"
+	case weapon.KindOrbital:
+		return "Orbital"
 	default:
 		return string(k)
 	}

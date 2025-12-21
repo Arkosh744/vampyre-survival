@@ -13,6 +13,7 @@ var DefaultWeaponChoices = []WeaponChoice{
 	{Name: "Projectile", Description: "Auto-aim ranged shots", Kind: "projectile"},
 	{Name: "Pulse", Description: "AoE damage around you", Kind: "aoe"},
 	{Name: "Lightning", Description: "Chain lightning jumps between enemies", Kind: "lightning"},
+	{Name: "Orbital", Description: "Spinning orbs deal constant damage", Kind: "orbital"},
 }
 
 type WeaponSelectScreen struct {

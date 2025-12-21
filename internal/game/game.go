@@ -399,6 +399,8 @@ func (g *Game) applyWeaponSelect() {
 		g.Weapons = []weapon.Weapon{weapon.NewAoE()}
 	case "lightning":
 		g.Weapons = []weapon.Weapon{weapon.NewLightning()}
+	case "orbital":
+		g.Weapons = []weapon.Weapon{weapon.NewOrbital()}
 	}
 	g.WeaponSelect = nil
 	g.State = StatePlaying
@@ -556,6 +558,8 @@ func (g *Game) addNewWeapon(kind weapon.WeaponKind) {
 		g.Weapons = append(g.Weapons, weapon.NewAoE())
 	case weapon.KindLightning:
 		g.Weapons = append(g.Weapons, weapon.NewLightning())
+	case weapon.KindOrbital:
+		g.Weapons = append(g.Weapons, weapon.NewOrbital())
 	}
 }
 
