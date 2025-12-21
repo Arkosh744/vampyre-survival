@@ -283,9 +283,11 @@ func (g *Game) update(dt float64) {
 		g.WaveSpawner.SpawnTimer += dt
 		if g.WaveSpawner.SpawnTimer >= g.WaveSpawner.CurrentSpawnInterval() && !g.WaveSpawner.AllSpawned() {
 			g.WaveSpawner.SpawnTimer = 0
-			e := g.spawnEnemyAtEdge()
-			if e != nil {
-				g.Enemies = append(g.Enemies, e)
+			for i := 0; i < world.SpawnBatchSize && !g.WaveSpawner.AllSpawned(); i++ {
+				e := g.spawnEnemyAtEdge()
+				if e != nil {
+					g.Enemies = append(g.Enemies, e)
+				}
 			}
 		}
 	}

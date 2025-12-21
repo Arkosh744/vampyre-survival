@@ -32,7 +32,7 @@ func Test_UpgradePool_OnlyOwnedWeaponStats(t *testing.T) {
 
 func Test_UpgradePool_NewWeaponOnlyIfNotOwned(t *testing.T) {
 	p := NewUpgradePool()
-	owned := []weapon.WeaponKind{weapon.KindSword, weapon.KindProjectile, weapon.KindAoE}
+	owned := []weapon.WeaponKind{weapon.KindSword, weapon.KindProjectile, weapon.KindAoE, weapon.KindLightning, weapon.KindOrbital}
 	choices := p.GetRandomChoices(20, owned)
 
 	for _, c := range choices {
