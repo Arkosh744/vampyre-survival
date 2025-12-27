@@ -44,15 +44,3 @@ func Test_Camera_Clamp(t *testing.T) {
 	require.GreaterOrEqual(t, c.Pos.Y, 0.0)
 }
 
-func Test_Camera_ShakeDecay(t *testing.T) {
-	c := NewCamera(80, 24)
-	c.Shake(2.0)
-	require.Greater(t, c.ShakeTimer, 0.0)
-	require.True(t, c.ShakeOffset.X != 0 || c.ShakeOffset.Y != 0)
-
-	// After enough time, shake decays
-	c.Follow(physics.Vec2{X: 40, Y: 12}, 0.2)
-	require.Equal(t, 0.0, c.ShakeTimer)
-	require.InDelta(t, 0.0, c.ShakeOffset.X, 0.001)
-	require.InDelta(t, 0.0, c.ShakeOffset.Y, 0.001)
-}

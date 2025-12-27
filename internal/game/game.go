@@ -262,8 +262,7 @@ func (g *Game) update(dt float64) {
 					g.State = StateGameOver
 					return
 				}
-				g.Camera.Shake(1.5)
-			}
+				}
 		}
 	}
 
@@ -446,8 +445,6 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 		g.Kills++
 		g.Player.Kills++
 		g.Combo.RegisterKill()
-		g.Camera.Shake(0.5)
-
 		// Lifesteal: heal on kill
 		if g.LifestealAmount > 0 {
 			g.Player.HP += g.LifestealAmount
