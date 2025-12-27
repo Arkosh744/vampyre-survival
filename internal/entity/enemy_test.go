@@ -114,11 +114,11 @@ func Test_ScaleForWave_Wave10(t *testing.T) {
 
 	e.ScaleForWave(10)
 
-	// hpMult = 1 + 0.08*9 = 1.72 -> int(15 * 1.72) = int(25.8) = 25
-	// dmgMult = 1 + 0.05*9 = 1.45 -> int(10 * 1.45) = int(14.5) = 14
-	require.Equal(t, 25, e.HP)
-	require.Equal(t, 25, e.MaxHP)
-	require.Equal(t, 14, e.Damage)
+	// hpMult = 1.12^9 = 2.773 -> int(15 * 2.773) = 41
+	// dmgMult = 1.08^9 = 1.999 -> int(10 * 1.999) = 19
+	require.Equal(t, 41, e.HP)
+	require.Equal(t, 41, e.MaxHP)
+	require.Equal(t, 19, e.Damage)
 }
 
 func Test_ScaleForWave_Boss(t *testing.T) {
@@ -130,10 +130,10 @@ func Test_ScaleForWave_Boss(t *testing.T) {
 
 	e.ScaleForWave(10)
 
-	// hpMult = 1.72 -> int(80 * 1.72) = int(137.6) = 137
-	// dmgMult = 1.45 -> int(20 * 1.45) = int(29.0) = 29
-	require.Equal(t, 137, e.HP)
-	require.Equal(t, 137, e.MaxHP)
-	require.Equal(t, 29, e.Damage)
+	// hpMult = 1.12^9 = 2.773 -> int(80 * 2.773) = 221
+	// dmgMult = 1.08^9 = 1.999 -> int(20 * 1.999) = 39
+	require.Equal(t, 221, e.HP)
+	require.Equal(t, 221, e.MaxHP)
+	require.Equal(t, 39, e.Damage)
 	require.Equal(t, origSpeed, e.Speed, "Speed should not change from scaling")
 }
