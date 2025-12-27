@@ -131,3 +131,13 @@ func Test_Combo_Update_NoCountDoesNothing(t *testing.T) {
 	c.Update(10.0)
 	require.Equal(t, 0, c.Count)
 }
+
+func Test_Combo_Frozen_NoDecay(t *testing.T) {
+	c := NewCombo()
+	for i := 0; i < 10; i++ {
+		c.RegisterKill()
+	}
+	c.Frozen = true
+	c.Update(100.0) // way past timeout
+	require.Equal(t, 10, c.Count, "frozen combo should not decay")
+}

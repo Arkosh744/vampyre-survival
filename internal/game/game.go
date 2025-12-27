@@ -8,6 +8,7 @@ import (
 	"github.com/arkosh/vampyre-survival/internal/engine"
 	"github.com/arkosh/vampyre-survival/internal/entity"
 	"github.com/arkosh/vampyre-survival/internal/physics"
+	"github.com/arkosh/vampyre-survival/internal/reward"
 	"github.com/arkosh/vampyre-survival/internal/skill"
 	"github.com/arkosh/vampyre-survival/internal/ui"
 	"github.com/arkosh/vampyre-survival/internal/weapon"
@@ -21,6 +22,7 @@ const (
 	StateWeaponSelect
 	StatePlaying
 	StateLevelUp
+	StateWaveReward
 	StatePaused
 	StateGameOver
 )
@@ -69,6 +71,31 @@ type Game struct {
 	BannerColor string
 
 	Combo *Combo
+
+	// Wave reward system
+	WaveRewardScreen *ui.WaveRewardScreen
+	RewardPool       *reward.RewardPool
+	MagnetRadius     float64
+
+	// Risk/Reward flags
+	GlassCannonActive   bool
+	DoomPactActive      bool
+	BloodPriceActive    bool
+	SoulHarvestActive   bool
+	BerserkerPactActive bool
+	FragileEgoActive    bool
+	GiantSlayerActive   bool
+	VoidWalkerActive    bool
+	GamblerActive       bool
+	CursedStrActive     bool
+	EnemySpeedMult      float64
+
+	// Modifier flags
+	ChainReactionDmg  int
+	MirrorImageActive bool
+	GravityWellActive bool
+	HasSecondWind     bool
+	LastDir           physics.Vec2
 }
 
 func NewGame() (*Game, error) {
@@ -160,7 +187,10 @@ func (g *Game) handleInput() {
 			return
 		}
 		if dir.Length() > 0 {
+			g.LastDir = dir
 			g.Player.SetDirection(dir)
+		} else if g.BerserkerPactActive && g.LastDir.Length() > 0 {
+			g.Player.SetDirection(g.LastDir)
 		}
 
 	case StateLevelUp:
@@ -171,6 +201,16 @@ func (g *Game) handleInput() {
 			g.LevelUp.Down()
 		case ui.KeyEnter:
 			g.applyLevelUp()
+		}
+
+	case StateWaveReward:
+		switch key {
+		case ui.KeyUp:
+			g.WaveRewardScreen.Up()
+		case ui.KeyDown:
+			g.WaveRewardScreen.Down()
+		case ui.KeyEnter:
+			g.applyWaveReward()
 		}
 
 	case StatePaused:
@@ -199,15 +239,38 @@ func (g *Game) update(dt float64) {
 	g.PlayTime += dt
 	g.Combo.Update(dt)
 
-	// Passive regen
-	if g.RegenRate > 0 && g.Player.HP < g.Player.MaxHP {
-		g.RegenAccum += g.RegenRate * dt
+	// Passive regen (with DoomPact drain)
+	netRegen := g.RegenRate
+	if g.DoomPactActive {
+		netRegen -= 1.0
+	}
+	if netRegen > 0 && g.Player.HP < g.Player.MaxHP {
+		g.RegenAccum += netRegen * dt
 		if g.RegenAccum >= 1.0 {
 			heal := int(g.RegenAccum)
 			g.RegenAccum -= float64(heal)
 			g.Player.HP += heal
 			if g.Player.HP > g.Player.MaxHP {
 				g.Player.HP = g.Player.MaxHP
+			}
+		}
+	} else if netRegen < 0 {
+		g.RegenAccum += netRegen * dt
+		if g.RegenAccum <= -1.0 {
+			dmg := int(-g.RegenAccum)
+			g.RegenAccum += float64(dmg)
+			g.Player.HP -= dmg
+			if g.Player.HP <= 0 {
+				g.Player.HP = 0
+				if g.HasSecondWind {
+					g.HasSecondWind = false
+					g.Player.HP = g.Player.MaxHP
+					g.Player.Invulnerable = true
+					g.Player.InvulnTimer = 2.0
+				} else {
+					g.State = StateGameOver
+					return
+				}
 			}
 		}
 	}
@@ -228,7 +291,7 @@ func (g *Game) update(dt float64) {
 		if p.Collected {
 			continue
 		}
-		p.MagnetToward(g.Player.Body.Pos, 8.0)
+		p.MagnetToward(g.Player.Body.Pos, g.MagnetRadius)
 		p.Update(dt)
 		if p.Body.Pos.DistanceTo(g.Player.Body.Pos) < 1.5 {
 			p.Collect()
@@ -245,27 +308,62 @@ func (g *Game) update(dt float64) {
 	targets := g.buildTargets()
 	for _, w := range g.Weapons {
 		w.Update(dt, g.Player.Body.Pos, targets)
-		for _, hit := range w.GetHits() {
+		hits := w.GetHits()
+		if g.MirrorImageActive {
+			hits = append(hits, hits...)
+		}
+		hasFired := len(hits) > 0
+		for _, hit := range hits {
 			g.applyHit(hit)
+		}
+		if hasFired && g.BloodPriceActive {
+			g.Player.HP -= 3
+			if g.Player.HP <= 0 {
+				g.Player.HP = 0
+				if g.HasSecondWind {
+					g.HasSecondWind = false
+					g.Player.HP = g.Player.MaxHP
+					g.Player.Invulnerable = true
+					g.Player.InvulnTimer = 2.0
+				} else {
+					g.State = StateGameOver
+					return
+				}
+			}
 		}
 	}
 
 	for _, e := range g.Enemies {
 		if e.IsAlive() {
 			e.ChaseTarget(g.Player.Body.Pos)
+			if g.GravityWellActive {
+				pull := g.Player.Body.Pos.Sub(e.Body.Pos).Normalize().Scale(2.0 * dt)
+				e.Body.Pos = e.Body.Pos.Add(pull)
+			}
 			e.Update(dt)
 
 			if engine.CheckAABB(&g.Player.Body, &e.Body) {
 				died := g.Player.TakeDamage(e.Damage)
 				g.DamageTaken += e.Damage
+				if g.FragileEgoActive {
+					g.Combo.Count = 0
+				}
 				if died {
-					g.State = StateGameOver
-					return
+					if g.HasSecondWind {
+						g.HasSecondWind = false
+						g.Player.HP = g.Player.MaxHP
+						g.Player.Invulnerable = true
+						g.Player.InvulnTimer = 2.0
+					} else {
+						g.State = StateGameOver
+						return
+					}
 				}
-				}
+			}
 		}
 	}
 
+	g.processChainReaction()
 	g.removeDeadEnemies()
 
 	if !g.WaveSpawner.WaveActive {
@@ -293,6 +391,7 @@ func (g *Game) update(dt float64) {
 
 	if g.WaveSpawner.AllSpawned() && len(g.Enemies) == 0 {
 		g.WaveSpawner.NextWave()
+		g.showWaveReward()
 	}
 }
 
@@ -347,6 +446,11 @@ func (g *Game) render() {
 			g.LevelUp.Draw(g.Term)
 		}
 
+	case StateWaveReward:
+		if g.WaveRewardScreen != nil {
+			g.WaveRewardScreen.Draw(g.Term)
+		}
+
 	case StatePaused:
 		w := g.Term.Width()
 		h := g.Term.Height()
@@ -380,6 +484,28 @@ func (g *Game) startGame() {
 	g.WaveSpawner = world.NewWaveSpawner()
 	g.Combo = NewCombo()
 	g.Upgrades = skill.NewUpgradePool()
+	g.RewardPool = reward.NewRewardPool()
+	g.MagnetRadius = 8.0
+	g.EnemySpeedMult = 1.0
+	g.WaveRewardScreen = nil
+
+	// Reset all reward flags
+	g.GlassCannonActive = false
+	g.DoomPactActive = false
+	g.BloodPriceActive = false
+	g.SoulHarvestActive = false
+	g.BerserkerPactActive = false
+	g.FragileEgoActive = false
+	g.GiantSlayerActive = false
+	g.VoidWalkerActive = false
+	g.GamblerActive = false
+	g.CursedStrActive = false
+	g.ChainReactionDmg = 0
+	g.MirrorImageActive = false
+	g.GravityWellActive = false
+	g.HasSecondWind = false
+	g.LastDir = physics.Vec2{}
+
 	g.WeaponSelect = ui.NewWeaponSelectScreen()
 	g.State = StateWeaponSelect
 }
@@ -426,6 +552,32 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 		return
 	}
 	dmg := int(float64(hit.Damage) * g.Combo.DamageMult())
+
+	// Reward damage modifiers
+	if g.GlassCannonActive {
+		dmg *= 3
+	}
+	if g.DoomPactActive {
+		dmg = int(float64(dmg) * 1.5)
+	}
+	if g.BloodPriceActive {
+		dmg *= 2
+	}
+	if g.GiantSlayerActive {
+		if e.Type == entity.EnemyBoss || e.Type == entity.EnemyTank {
+			dmg *= 5
+		} else {
+			dmg /= 2
+		}
+	}
+	if g.GamblerActive {
+		if rand.Float64() < 0.5 {
+			dmg *= 3
+		} else {
+			dmg = 0
+		}
+	}
+
 	isCrit := false
 	if g.CritChance > 0 && rand.Float64() < g.CritChance {
 		dmg *= 2
@@ -459,13 +611,24 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 		// HP drop chance
 		g.trySpawnHPDrop(e)
 
-		xp := int(float64(e.XPDrop) * g.XPMultiplier * g.Combo.XPMult())
-		if xp < 1 {
-			xp = 1
-		}
-		leveled := g.Player.AddXP(xp)
-		if leveled {
-			g.showLevelUp()
+		if g.SoulHarvestActive {
+			// No XP, upgrade random weapon instead
+			if len(g.Weapons) > 0 {
+				g.Weapons[rand.Intn(len(g.Weapons))].Upgrade()
+			}
+		} else {
+			xpMult := g.XPMultiplier
+			if g.DoomPactActive {
+				xpMult += 1.0
+			}
+			xp := int(float64(e.XPDrop) * xpMult * g.Combo.XPMult())
+			if xp < 1 {
+				xp = 1
+			}
+			leveled := g.Player.AddXP(xp)
+			if leveled {
+				g.showLevelUp()
+			}
 		}
 	}
 }
@@ -510,7 +673,9 @@ func (g *Game) applyUpgrade(upg skill.Upgrade) {
 	case skill.UpgNewWeapon:
 		g.addNewWeapon(upg.WeaponKind)
 	case skill.UpgPlayerHP:
-		g.Player.AddMaxHP(int(upg.Value))
+		if !g.VoidWalkerActive {
+			g.Player.AddMaxHP(int(upg.Value))
+		}
 	case skill.UpgPlayerSpeed:
 		g.Player.AddSpeed(upg.Value)
 	case skill.UpgRegen:
@@ -643,6 +808,8 @@ func (g *Game) spawnEnemyAtEdge() *entity.Enemy {
 		return nil
 	}
 	e.ScaleForWave(g.WaveSpawner.CurrentWave)
+	e.Speed *= g.EnemySpeedMult
+	e.Body.MaxSpeed *= g.EnemySpeedMult
 
 	// Blood Moon: extra HP scaling
 	if g.WaveSpawner.Event == world.EventBloodMoon {
@@ -714,4 +881,106 @@ func (g *Game) renderGameOver() {
 
 	hint := "Press ENTER for menu, Q to quit"
 	g.Term.WriteStr((w-len(hint))/2, h/2+5, hint, ui.ColorDim)
+}
+
+func (g *Game) showWaveReward() {
+	choices := g.RewardPool.GetChoices(g.WaveSpawner.CurrentWave)
+	if len(choices) == 0 {
+		return
+	}
+	g.WaveRewardScreen = ui.NewWaveRewardScreen(choices)
+	g.State = StateWaveReward
+}
+
+func (g *Game) applyWaveReward() {
+	if g.WaveRewardScreen == nil {
+		g.State = StatePlaying
+		return
+	}
+	rew := g.WaveRewardScreen.SelectedReward()
+	g.RewardPool.MarkTaken(rew.ID)
+	g.applyRewardEffect(rew)
+	g.WaveRewardScreen = nil
+	g.State = StatePlaying
+}
+
+func (g *Game) applyRewardEffect(rew reward.Reward) {
+	switch rew.ID {
+	case reward.RewGlassCannon:
+		g.GlassCannonActive = true
+		g.Player.MaxHP /= 2
+		if g.Player.HP > g.Player.MaxHP {
+			g.Player.HP = g.Player.MaxHP
+		}
+	case reward.RewDoomPact:
+		g.DoomPactActive = true
+	case reward.RewBloodPrice:
+		g.BloodPriceActive = true
+	case reward.RewSoulHarvest:
+		g.SoulHarvestActive = true
+	case reward.RewBerserkerPact:
+		g.BerserkerPactActive = true
+		g.Player.AddSpeed(g.Player.Body.MaxSpeed * 0.5)
+	case reward.RewFragileEgo:
+		g.FragileEgoActive = true
+	case reward.RewGiantSlayer:
+		g.GiantSlayerActive = true
+	case reward.RewVoidWalker:
+		g.VoidWalkerActive = true
+		g.Player.InvulnBonus += 3.0
+	case reward.RewGamblersFate:
+		g.GamblerActive = true
+	case reward.RewCursedStrength:
+		g.CursedStrActive = true
+		g.EnemySpeedMult = 1.3
+		for _, w := range g.Weapons {
+			w.AddDamage(20)
+		}
+	case reward.RewChainReaction:
+		g.ChainReactionDmg = 25
+	case reward.RewMomentum:
+		g.Combo.Frozen = true
+	case reward.RewGravityWell:
+		g.GravityWellActive = true
+	case reward.RewMirrorImage:
+		g.MirrorImageActive = true
+	case reward.RewWeaponForge:
+		for _, w := range g.Weapons {
+			w.AddDamage(10)
+		}
+	case reward.RewTimeWarp:
+		for _, w := range g.Weapons {
+			w.MultiplyCooldown(0.7)
+		}
+	case reward.RewXPMagnet:
+		g.MagnetRadius *= 3
+	case reward.RewVampiricAura:
+		g.RegenRate += 3
+	case reward.RewSecondWind:
+		g.HasSecondWind = true
+	case reward.RewFullRestore:
+		g.Player.AddMaxHP(25)
+		g.Player.HP = g.Player.MaxHP
+	}
+}
+
+func (g *Game) processChainReaction() {
+	if g.ChainReactionDmg <= 0 {
+		return
+	}
+	for _, e := range g.Enemies {
+		if e.HP != 0 {
+			continue
+		}
+		// Dead enemy (HP==0) explodes
+		for _, other := range g.Enemies {
+			if !other.IsAlive() {
+				continue
+			}
+			if e.Body.Pos.DistanceTo(other.Body.Pos) <= 3.0 {
+				other.TakeDamage(g.ChainReactionDmg)
+			}
+		}
+		e.HP = -1 // mark as processed
+	}
 }

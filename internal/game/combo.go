@@ -11,6 +11,7 @@ type Combo struct {
 	Count      int
 	Timer      float64
 	BestStreak int
+	Frozen     bool // Momentum reward: combo never expires
 }
 
 func NewCombo() *Combo {
@@ -27,6 +28,9 @@ func (c *Combo) RegisterKill() {
 
 func (c *Combo) Update(dt float64) {
 	if c.Count == 0 {
+		return
+	}
+	if c.Frozen {
 		return
 	}
 	c.Timer += dt
