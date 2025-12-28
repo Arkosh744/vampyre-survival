@@ -54,16 +54,9 @@ func (c *Combo) XPMult() float64 {
 	}
 }
 
-// DamageMult returns damage multiplier based on current combo tier.
+// DamageMult returns damage multiplier: linear +0.005% per kill.
 func (c *Combo) DamageMult() float64 {
-	switch {
-	case c.Count >= 20:
-		return 1.25
-	case c.Count >= 10:
-		return 1.10
-	default:
-		return 1.0
-	}
+	return 1.0 + float64(c.Count)*0.00005
 }
 
 // Label returns combo banner text, empty string if combo < 5.

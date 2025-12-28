@@ -91,19 +91,17 @@ func Test_Combo_XPMult_Tiers(t *testing.T) {
 	require.Equal(t, 3.0, c.XPMult())
 }
 
-func Test_Combo_DamageMult_Tiers(t *testing.T) {
+func Test_Combo_DamageMult_Linear(t *testing.T) {
 	c := NewCombo()
-	require.Equal(t, 1.0, c.DamageMult())
+	require.InDelta(t, 1.0, c.DamageMult(), 1e-9)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		c.RegisterKill()
 	}
-	require.Equal(t, 1.10, c.DamageMult())
+	require.InDelta(t, 1.005, c.DamageMult(), 1e-9)
 
-	for i := 0; i < 10; i++ {
-		c.RegisterKill()
-	}
-	require.Equal(t, 1.25, c.DamageMult())
+	c.Count = 10000
+	require.InDelta(t, 1.5, c.DamageMult(), 1e-9)
 }
 
 func Test_Combo_Label_Thresholds(t *testing.T) {
