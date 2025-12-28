@@ -31,6 +31,7 @@ const (
 	WorldWidth  = 200.0
 	WorldHeight = 200.0
 	TargetFPS   = 30
+	MaxWeapons  = 3
 )
 
 type Game struct {
@@ -635,6 +636,9 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 
 func (g *Game) showLevelUp() {
 	owned := g.ownedWeaponKinds()
+	if len(g.Weapons) >= MaxWeapons {
+		owned = []weapon.WeaponKind{weapon.KindSword, weapon.KindProjectile, weapon.KindAoE, weapon.KindLightning, weapon.KindOrbital}
+	}
 	choices := g.Upgrades.GetRandomChoices(3, owned)
 	if len(choices) == 0 {
 		return
@@ -708,6 +712,9 @@ func (g *Game) findWeapon(kind weapon.WeaponKind) weapon.Weapon {
 }
 
 func (g *Game) addNewWeapon(kind weapon.WeaponKind) {
+	if len(g.Weapons) >= MaxWeapons {
+		return
+	}
 	for _, w := range g.Weapons {
 		if w.Kind() == kind {
 			return // already owned
