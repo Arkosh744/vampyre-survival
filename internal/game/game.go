@@ -105,7 +105,7 @@ func NewGame() (*Game, error) {
 		return nil, err
 	}
 
-	cam := engine.NewCamera(t.Width(), t.Height()-3)
+	cam := engine.NewCamera(t.Width(), t.Height()-6)
 	cam.SetWorldBounds(WorldWidth, WorldHeight)
 
 	g := &Game{
@@ -422,7 +422,12 @@ func (g *Game) render() {
 		}
 		g.Renderer.DrawEffects()
 		g.Renderer.DrawPlayer(g.Player)
-		g.Renderer.DrawHUD(g.Player, g.WaveSpawner.CurrentWave, g.Kills, len(g.Weapons), g.Combo.Count)
+		var wstats []weapon.WeaponStats
+		for _, w := range g.Weapons {
+			wstats = append(wstats, w.Stats())
+		}
+		comboPct := (g.Combo.DamageMult() - 1.0) * 100
+		g.Renderer.DrawHUD(g.Player, g.WaveSpawner.CurrentWave, g.Kills, wstats, g.Combo.Count, comboPct)
 
 		// Combo label banner
 		if label := g.Combo.Label(); label != "" {

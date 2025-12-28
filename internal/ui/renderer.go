@@ -42,8 +42,8 @@ func (r *Renderer) DrawGround() {
 	camX := int(r.Camera.Pos.X)
 	camY := int(r.Camera.Pos.Y)
 	viewH := r.Camera.Height
-	if viewH > r.Term.Height()-3 {
-		viewH = r.Term.Height() - 3
+	if viewH > r.Term.Height()-6 {
+		viewH = r.Term.Height() - 6
 	}
 
 	for sy := 0; sy < viewH; sy++ {
@@ -218,27 +218,60 @@ func (r *Renderer) drawBorderCell(pos physics.Vec2) {
 	r.Term.SetCell(sx, sy, '#', ColorWhite)
 }
 
-func (r *Renderer) DrawHUD(p *entity.Player, wave int, kills int, weaponCount int, comboCount int) {
+func (r *Renderer) DrawHUD(p *entity.Player, wave int, kills int, weapons []weapon.WeaponStats, comboCount int, comboDmgPct float64) {
 	h := r.Term.Height()
 	w := r.Term.Width()
 
 	hpBar := renderBar(p.HP, p.MaxHP, 20)
 	xpBar := renderBar(p.XP, p.XPToNextLevel(), 20)
 
-	r.Term.WriteStr(0, h-3, fmt.Sprintf("HP: %s %d/%d", hpBar, p.HP, p.MaxHP), ColorRed)
-	r.Term.WriteStr(0, h-2, fmt.Sprintf("XP: %s Lv.%d", xpBar, p.Level), ColorCyan)
-	r.Term.WriteStr(0, h-1, fmt.Sprintf("Wave: %d  Kills: %d  Weapons: %d", wave, kills, weaponCount), ColorWhite)
+	// Row h-6: HP + combo
+	hpLine := fmt.Sprintf("HP: %s %d/%d", hpBar, p.HP, p.MaxHP)
+	r.Term.WriteStr(0, h-6, hpLine, ColorRed)
 
 	if comboCount >= 5 {
-		comboStr := fmt.Sprintf("COMBO: x%d", comboCount)
+		comboStr := fmt.Sprintf("COMBO: x%d (+%.2f%%)", comboCount, comboDmgPct)
 		color := ColorYellow
 		if comboCount >= 20 {
 			color = ColorBoldRed
 		} else if comboCount >= 10 {
 			color = ColorMagenta
 		}
-		r.Term.WriteStr(w-len(comboStr), h-3, comboStr, color)
+		r.Term.WriteStr(w-len(comboStr), h-6, comboStr, color)
 	}
+
+	// Row h-5: XP
+	r.Term.WriteStr(0, h-5, fmt.Sprintf("XP: %s Lv.%d", xpBar, p.Level), ColorCyan)
+
+	// Rows h-4..h-2: weapon stats (up to 3 slots)
+	weaponColors := map[weapon.WeaponKind]string{
+		weapon.KindSword:      ColorWhite,
+		weapon.KindProjectile: ColorCyan,
+		weapon.KindAoE:        ColorMagenta,
+		weapon.KindLightning:  ColorCyan,
+		weapon.KindOrbital:    ColorMagenta,
+	}
+	for i := 0; i < 3; i++ {
+		row := h - 4 + i
+		if i < len(weapons) {
+			ws := weapons[i]
+			line := fmt.Sprintf("%-6s Lv.%d  DMG:%d", ws.Name, ws.Level, ws.Damage)
+			if ws.Cooldown > 0 {
+				line += fmt.Sprintf("  CD:%.2f", ws.Cooldown)
+			}
+			if ws.Range > 0 {
+				line += fmt.Sprintf("  RNG:%.1f", ws.Range)
+			}
+			color := weaponColors[ws.Kind]
+			if color == "" {
+				color = ColorWhite
+			}
+			r.Term.WriteStr(0, row, line, color)
+		}
+	}
+
+	// Row h-1: wave info
+	r.Term.WriteStr(0, h-1, fmt.Sprintf("Wave: %d  Kills: %d", wave, kills), ColorWhite)
 }
 
 func renderBar(current, max, width int) string {

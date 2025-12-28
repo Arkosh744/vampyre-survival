@@ -60,7 +60,10 @@ func (a *AoE) Upgrade() {
 	a.cooldown *= 0.88
 }
 
-func (a *AoE) Kind() WeaponKind            { return KindAoE }
+func (a *AoE) Kind() WeaponKind { return KindAoE }
+func (a *AoE) Stats() WeaponStats {
+	return WeaponStats{Name: "Pulse", Kind: KindAoE, Level: a.level, Damage: a.damage, Cooldown: a.cooldown, Range: a.radius}
+}
 func (a *AoE) AddDamage(v int)             { a.damage += v }
 func (a *AoE) MultiplyCooldown(f float64)  { a.cooldown *= f }
 func (a *AoE) AddRange(v float64)          { a.radius += v }

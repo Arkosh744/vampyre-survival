@@ -83,7 +83,10 @@ func (s *Sword) Upgrade() {
 	s.attackRange += 0.5
 }
 
-func (s *Sword) Kind() WeaponKind            { return KindSword }
+func (s *Sword) Kind() WeaponKind { return KindSword }
+func (s *Sword) Stats() WeaponStats {
+	return WeaponStats{Name: "Sword", Kind: KindSword, Level: s.level, Damage: s.damage, Cooldown: s.cooldown, Range: s.attackRange}
+}
 func (s *Sword) AddDamage(v int)             { s.damage += v }
 func (s *Sword) MultiplyCooldown(f float64)  { s.cooldown *= f }
 func (s *Sword) AddRange(v float64)          { s.attackRange += v }

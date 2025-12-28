@@ -122,7 +122,10 @@ func (l *Lightning) Upgrade() {
 	}
 }
 
-func (l *Lightning) Kind() WeaponKind            { return KindLightning }
+func (l *Lightning) Kind() WeaponKind { return KindLightning }
+func (l *Lightning) Stats() WeaponStats {
+	return WeaponStats{Name: "Zap", Kind: KindLightning, Level: l.level, Damage: l.damage, Cooldown: l.cooldown, Range: l.attackRange}
+}
 func (l *Lightning) AddDamage(v int)             { l.damage += v }
 func (l *Lightning) MultiplyCooldown(f float64)  { l.cooldown *= f }
 func (l *Lightning) AddRange(v float64)          { l.attackRange += v }

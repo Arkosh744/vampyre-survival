@@ -22,6 +22,15 @@ const (
 	KindOrbital    WeaponKind = "orbital"
 )
 
+type WeaponStats struct {
+	Name     string
+	Kind     WeaponKind
+	Level    int
+	Damage   int
+	Cooldown float64
+	Range    float64
+}
+
 type Weapon interface {
 	Update(dt float64, ownerPos physics.Vec2, targets []Target)
 	GetHits() []HitResult
@@ -29,6 +38,7 @@ type Weapon interface {
 	Level() int
 	Upgrade()
 	Kind() WeaponKind
+	Stats() WeaponStats
 	AddDamage(v int)
 	MultiplyCooldown(factor float64)
 	AddRange(v float64)

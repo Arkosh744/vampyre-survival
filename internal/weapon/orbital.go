@@ -87,7 +87,10 @@ func (o *Orbital) Upgrade() {
 	}
 }
 
-func (o *Orbital) Kind() WeaponKind            { return KindOrbital }
+func (o *Orbital) Kind() WeaponKind { return KindOrbital }
+func (o *Orbital) Stats() WeaponStats {
+	return WeaponStats{Name: "Orb", Kind: KindOrbital, Level: o.level, Damage: o.damage, Range: o.radius}
+}
 func (o *Orbital) AddDamage(v int)             { o.damage += v }
 func (o *Orbital) MultiplyCooldown(_ float64)  {} // no cooldown to multiply
 func (o *Orbital) AddRange(v float64)          { o.radius += v }

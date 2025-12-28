@@ -111,7 +111,10 @@ func (pg *ProjectileGun) Upgrade() {
 	pg.cooldown *= 0.88
 }
 
-func (pg *ProjectileGun) Kind() WeaponKind            { return KindProjectile }
+func (pg *ProjectileGun) Kind() WeaponKind { return KindProjectile }
+func (pg *ProjectileGun) Stats() WeaponStats {
+	return WeaponStats{Name: "Bolt", Kind: KindProjectile, Level: pg.level, Damage: pg.damage, Cooldown: pg.cooldown}
+}
 func (pg *ProjectileGun) AddDamage(v int)             { pg.damage += v }
 func (pg *ProjectileGun) MultiplyCooldown(f float64)  { pg.cooldown *= f }
 func (pg *ProjectileGun) AddRange(v float64)          { _ = v } // range is TTL-based, no direct range field
