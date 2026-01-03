@@ -143,3 +143,30 @@ func Test_WaveSpawner_Wave1_Total500(t *testing.T) {
 func Test_SpawnBatchSize(t *testing.T) {
 	require.Equal(t, 3, SpawnBatchSize)
 }
+
+func Test_WaveSpawner_FinalWave(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = FinalWave
+	require.True(t, ws.IsFinalWave())
+	ws.CurrentWave = FinalWave - 1
+	require.False(t, ws.IsFinalWave())
+}
+
+func Test_WaveSpawner_NextWave_AtFinal_Finished(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = FinalWave
+	ws.WaveActive = true
+	ws.NextWave()
+	require.True(t, ws.Finished)
+	require.False(t, ws.WaveActive)
+	require.Equal(t, FinalWave, ws.CurrentWave, "should not increment past FinalWave")
+}
+
+func Test_WaveSpawner_NotFinished_Before15(t *testing.T) {
+	ws := NewWaveSpawner()
+	for i := 1; i < FinalWave; i++ {
+		ws.CurrentWave = i
+		ws.NextWave()
+		require.False(t, ws.Finished, "should not be finished at wave %d", i)
+	}
+}

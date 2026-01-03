@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	BaseEnemyCount    = 500
-	WaveScaling       = 1.2
+	BaseEnemyCount    = 40
+	WaveScaling       = 1.15
 	BossEveryN        = 5
+	FinalWave         = 15
 	BaseSpawnInterval = 0.05
 	MinSpawnInterval  = 0.008
 	SpawnBatchSize    = 3
@@ -35,6 +36,7 @@ type WaveSpawner struct {
 	NextIsBoss    bool
 	Event         WaveEvent
 	EventName     string
+	Finished      bool
 }
 
 func NewWaveSpawner() *WaveSpawner {
@@ -152,7 +154,20 @@ func (ws *WaveSpawner) AllSpawned() bool {
 	return ws.EnemiesToSpawn <= 0
 }
 
+func (ws *WaveSpawner) IsFinalWave() bool {
+	return ws.CurrentWave >= FinalWave
+}
+
+func (ws *WaveSpawner) IsComplete() bool {
+	return ws.Finished
+}
+
 func (ws *WaveSpawner) NextWave() {
+	if ws.CurrentWave >= FinalWave {
+		ws.Finished = true
+		ws.WaveActive = false
+		return
+	}
 	ws.CurrentWave++
 	ws.WaveActive = false
 }
