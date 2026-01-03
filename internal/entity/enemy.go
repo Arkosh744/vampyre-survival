@@ -14,12 +14,24 @@ const (
 	EnemySwarmer
 	EnemyTank
 	EnemyDasher
+	EnemyElderVampyre
 )
 
 const (
 	DasherIdleSpeed  = 6.0
 	DasherDashSpeed  = 40.0
 	DasherDashRange  = 15.0
+
+	ElderBaseHP      = 800
+	ElderBaseDMG     = 30
+	ElderBaseSpeed   = 5.0
+	ElderEnrageHP    = 0.5
+	ElderEnrageSpeed = 8.0
+	ElderEnrageDMG   = 45
+	ElderSpawnCD     = 3.0
+	ElderEnrageCD    = 1.5
+	ElderSpawnCount  = 3
+	ElderEnrageCount = 5
 )
 
 type Enemy struct {
@@ -31,6 +43,11 @@ type Enemy struct {
 	Speed   float64
 	XPDrop  int
 	Dashing bool // for Dasher telegraph
+
+	// Elder Vampyre fields
+	SpawnTimer float64
+	SpawnCD    float64
+	Enraged    bool
 }
 
 func NewEnemy(typ EnemyType, x, y float64) *Enemy {
@@ -85,6 +102,19 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 			Width:    1,
 			Height:   1,
 		}
+	case EnemyElderVampyre:
+		e.HP = ElderBaseHP
+		e.MaxHP = ElderBaseHP
+		e.Damage = ElderBaseDMG
+		e.Speed = ElderBaseSpeed
+		e.XPDrop = 50
+		e.SpawnCD = ElderSpawnCD
+		e.Body = physics.Body{
+			Pos:      physics.Vec2{X: x, Y: y},
+			MaxSpeed: ElderBaseSpeed,
+			Width:    5,
+			Height:   3,
+		}
 	default: // EnemyNormal
 		e.HP = 15
 		e.MaxHP = 15
@@ -134,6 +164,43 @@ func (e *Enemy) TakeDamage(dmg int) bool {
 
 func (e *Enemy) IsAlive() bool {
 	return e.HP > 0
+}
+
+// CheckEnrage triggers phase 2 at ≤50% HP. Returns true the first time it triggers.
+func (e *Enemy) CheckEnrage() bool {
+	if e.Type != EnemyElderVampyre || e.Enraged {
+		return false
+	}
+	if float64(e.HP) <= float64(e.MaxHP)*ElderEnrageHP {
+		e.Enraged = true
+		e.Speed = ElderEnrageSpeed
+		e.Body.MaxSpeed = ElderEnrageSpeed
+		e.Damage = ElderEnrageDMG
+		e.SpawnCD = ElderEnrageCD
+		return true
+	}
+	return false
+}
+
+// UpdateSpawnTimer ticks the spawn timer. Returns true when cooldown reached.
+func (e *Enemy) UpdateSpawnTimer(dt float64) bool {
+	if e.SpawnCD <= 0 {
+		return false
+	}
+	e.SpawnTimer += dt
+	if e.SpawnTimer >= e.SpawnCD {
+		e.SpawnTimer -= e.SpawnCD
+		return true
+	}
+	return false
+}
+
+// SpawnCount returns how many minions to spawn per cycle.
+func (e *Enemy) SpawnCount() int {
+	if e.Enraged {
+		return ElderEnrageCount
+	}
+	return ElderSpawnCount
 }
 
 // ScaleForWave increases HP (x1.12/wave), Damage (x1.08/wave), Speed (x1.075/wave).

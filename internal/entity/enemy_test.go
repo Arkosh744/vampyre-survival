@@ -94,6 +94,68 @@ func Test_Enemy_IsAlive(t *testing.T) {
 	require.False(t, e.IsAlive())
 }
 
+func Test_Enemy_NewElderVampyre(t *testing.T) {
+	e := NewEnemy(EnemyElderVampyre, 50, 50)
+	require.Equal(t, EnemyElderVampyre, e.Type)
+	require.Equal(t, ElderBaseHP, e.HP)
+	require.Equal(t, ElderBaseHP, e.MaxHP)
+	require.Equal(t, ElderBaseDMG, e.Damage)
+	require.Equal(t, ElderBaseSpeed, e.Speed)
+	require.Equal(t, 50, e.XPDrop)
+	require.Equal(t, 5.0, e.Body.Width)
+	require.Equal(t, 3.0, e.Body.Height)
+	require.Equal(t, ElderSpawnCD, e.SpawnCD)
+	require.False(t, e.Enraged)
+}
+
+func Test_Enemy_ElderVampyre_CheckEnrage_NotTriggered(t *testing.T) {
+	e := NewEnemy(EnemyElderVampyre, 0, 0)
+	// HP > 50% — should not enrage
+	e.HP = e.MaxHP
+	require.False(t, e.CheckEnrage())
+	require.False(t, e.Enraged)
+}
+
+func Test_Enemy_ElderVampyre_CheckEnrage_Triggered(t *testing.T) {
+	e := NewEnemy(EnemyElderVampyre, 0, 0)
+	e.HP = e.MaxHP / 2 // exactly 50% → ≤50%
+	require.True(t, e.CheckEnrage())
+	require.True(t, e.Enraged)
+	require.Equal(t, ElderEnrageSpeed, e.Speed)
+	require.Equal(t, ElderEnrageDMG, e.Damage)
+	require.Equal(t, ElderEnrageCD, e.SpawnCD)
+}
+
+func Test_Enemy_ElderVampyre_CheckEnrage_OnlyOnce(t *testing.T) {
+	e := NewEnemy(EnemyElderVampyre, 0, 0)
+	e.HP = 1
+	require.True(t, e.CheckEnrage())
+	require.False(t, e.CheckEnrage(), "should not trigger twice")
+}
+
+func Test_Enemy_ElderVampyre_UpdateSpawnTimer(t *testing.T) {
+	e := NewEnemy(EnemyElderVampyre, 0, 0)
+	require.False(t, e.UpdateSpawnTimer(1.0))
+	require.False(t, e.UpdateSpawnTimer(1.0))
+	require.True(t, e.UpdateSpawnTimer(1.0), "should fire at 3.0s CD")
+}
+
+func Test_Enemy_ElderVampyre_SpawnCount(t *testing.T) {
+	e := NewEnemy(EnemyElderVampyre, 0, 0)
+	require.Equal(t, ElderSpawnCount, e.SpawnCount())
+	e.Enraged = true
+	require.Equal(t, ElderEnrageCount, e.SpawnCount())
+}
+
+func Test_Enemy_ElderVampyre_ScaleForWave(t *testing.T) {
+	e := NewEnemy(EnemyElderVampyre, 0, 0)
+	e.ScaleForWave(15)
+	// 1.12^14 ≈ 4.887 → 800*4.887 = 3909
+	require.Greater(t, e.HP, 3000)
+	require.Greater(t, e.Damage, 80)
+	require.Greater(t, e.Speed, 10.0)
+}
+
 func Test_ScaleForWave_Wave1_NoChange(t *testing.T) {
 	e := NewEnemy(EnemyNormal, 0, 0)
 	origHP := e.HP
