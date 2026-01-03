@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"math"
 	"testing"
 
 	"github.com/arkosh/vampyre-survival/internal/physics"
@@ -108,7 +109,7 @@ func Test_ScaleForWave_Wave1_NoChange(t *testing.T) {
 
 func Test_ScaleForWave_Wave10(t *testing.T) {
 	e := NewEnemy(EnemyNormal, 0, 0)
-	// Normal: HP=15, Damage=10
+	// Normal: HP=15, Damage=10, Speed=9.0
 	require.Equal(t, 15, e.HP)
 	require.Equal(t, 10, e.Damage)
 
@@ -116,24 +117,28 @@ func Test_ScaleForWave_Wave10(t *testing.T) {
 
 	// hpMult = 1.12^9 = 2.773 -> int(15 * 2.773) = 41
 	// dmgMult = 1.08^9 = 1.999 -> int(10 * 1.999) = 19
+	// spdMult = 1.075^9 = 1.917 -> 9.0 * 1.917 = 17.25
 	require.Equal(t, 41, e.HP)
 	require.Equal(t, 41, e.MaxHP)
 	require.Equal(t, 19, e.Damage)
+	require.InDelta(t, 9.0*math.Pow(1.075, 9), e.Speed, 0.01)
+	require.InDelta(t, 9.0*math.Pow(1.075, 9), e.Body.MaxSpeed, 0.01)
 }
 
 func Test_ScaleForWave_Boss(t *testing.T) {
 	e := NewEnemy(EnemyBoss, 0, 0)
-	// Boss: HP=80, Damage=20
+	// Boss: HP=80, Damage=20, Speed=12.0
 	require.Equal(t, 80, e.HP)
 	require.Equal(t, 20, e.Damage)
-	origSpeed := e.Speed
 
 	e.ScaleForWave(10)
 
 	// hpMult = 1.12^9 = 2.773 -> int(80 * 2.773) = 221
 	// dmgMult = 1.08^9 = 1.999 -> int(20 * 1.999) = 39
+	// spdMult = 1.075^9 = 1.917 -> 12.0 * 1.917 = 23.0
 	require.Equal(t, 221, e.HP)
 	require.Equal(t, 221, e.MaxHP)
 	require.Equal(t, 39, e.Damage)
-	require.Equal(t, origSpeed, e.Speed, "Speed should not change from scaling")
+	require.InDelta(t, 12.0*math.Pow(1.075, 9), e.Speed, 0.01)
+	require.InDelta(t, 12.0*math.Pow(1.075, 9), e.Body.MaxSpeed, 0.01)
 }
