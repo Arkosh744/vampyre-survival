@@ -44,6 +44,18 @@ func NewWaveSpawner() *WaveSpawner {
 }
 
 func (ws *WaveSpawner) StartWave() {
+	// Final wave: just the Elder Vampyre
+	if ws.IsFinalWave() {
+		ws.TotalInWave = 1
+		ws.EnemiesToSpawn = 1
+		ws.WaveActive = true
+		ws.SpawnTimer = 0
+		ws.NextIsBoss = false
+		ws.Event = EventNone
+		ws.EventName = ""
+		return
+	}
+
 	count := int(float64(BaseEnemyCount) * math.Pow(WaveScaling, float64(ws.CurrentWave-1)))
 	if count < BaseEnemyCount {
 		count = BaseEnemyCount
@@ -107,6 +119,10 @@ func (ws *WaveSpawner) SpawnNext(worldCenterX, worldCenterY float64) *entity.Ene
 	}
 
 	ws.EnemiesToSpawn--
+
+	if ws.IsFinalWave() {
+		return entity.NewEnemy(entity.EnemyElderVampyre, worldCenterX, worldCenterY)
+	}
 
 	if ws.IsBossWave() && ws.EnemiesToSpawn == 0 {
 		return entity.NewEnemy(entity.EnemyBoss, worldCenterX, worldCenterY)

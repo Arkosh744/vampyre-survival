@@ -170,3 +170,30 @@ func Test_WaveSpawner_NotFinished_Before15(t *testing.T) {
 		require.False(t, ws.Finished, "should not be finished at wave %d", i)
 	}
 }
+
+func Test_WaveSpawner_FinalWave_SpawnsElderVampyre(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = FinalWave
+	ws.StartWave()
+	e := ws.SpawnNext(100, 100)
+	require.NotNil(t, e)
+	require.Equal(t, entity.EnemyElderVampyre, e.Type)
+}
+
+func Test_WaveSpawner_FinalWave_OnlyOneEnemy(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = FinalWave
+	ws.StartWave()
+	require.Equal(t, 1, ws.TotalInWave)
+	e := ws.SpawnNext(0, 0)
+	require.NotNil(t, e)
+	require.True(t, ws.AllSpawned())
+}
+
+func Test_WaveSpawner_FinalWave_NoEvent(t *testing.T) {
+	ws := NewWaveSpawner()
+	ws.CurrentWave = FinalWave
+	ws.StartWave()
+	require.Equal(t, EventNone, ws.Event)
+	require.Equal(t, "", ws.EventName)
+}
