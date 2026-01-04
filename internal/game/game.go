@@ -25,6 +25,7 @@ const (
 	StateWaveReward
 	StatePaused
 	StateGameOver
+	StateVictory
 )
 
 const (
@@ -90,6 +91,8 @@ type Game struct {
 	GamblerActive       bool
 	CursedStrActive     bool
 	EnemySpeedMult      float64
+
+	ElderBoss *entity.Enemy
 
 	// Modifier flags
 	ChainReactionDmg  int
@@ -223,6 +226,14 @@ func (g *Game) handleInput() {
 		}
 
 	case StateGameOver:
+		switch key {
+		case ui.KeyEnter:
+			g.State = StateMenu
+		case ui.KeyQ, ui.KeyEsc:
+			g.Running = false
+		}
+
+	case StateVictory:
 		switch key {
 		case ui.KeyEnter:
 			g.State = StateMenu
@@ -364,13 +375,46 @@ func (g *Game) update(dt float64) {
 		}
 	}
 
+	// Elder Vampyre boss mechanics
+	if g.ElderBoss != nil && g.ElderBoss.IsAlive() {
+		if g.ElderBoss.CheckEnrage() {
+			g.BannerText = "THE ELDER AWAKENS!"
+			g.BannerTimer = 2.5
+			g.BannerColor = ui.ColorBoldRed
+		}
+		if g.ElderBoss.UpdateSpawnTimer(dt) {
+			count := g.ElderBoss.SpawnCount()
+			for i := 0; i < count; i++ {
+				minion := entity.NewEnemy(entity.EnemySwarmer, g.ElderBoss.Body.Pos.X, g.ElderBoss.Body.Pos.Y)
+				minion.ScaleForWave(g.WaveSpawner.CurrentWave)
+				minion.Speed *= g.EnemySpeedMult
+				minion.Body.MaxSpeed *= g.EnemySpeedMult
+				g.Enemies = append(g.Enemies, minion)
+			}
+		}
+	}
+
 	g.processChainReaction()
 	g.removeDeadEnemies()
 
+	// Check victory: final wave, all spawned, all dead
+	if g.WaveSpawner.IsFinalWave() && g.WaveSpawner.AllSpawned() && len(g.Enemies) == 0 {
+		g.State = StateVictory
+		return
+	}
+
+	if g.WaveSpawner.IsComplete() {
+		g.State = StateVictory
+		return
+	}
+
 	if !g.WaveSpawner.WaveActive {
 		g.WaveSpawner.StartWave()
-		// Show banner for wave events
-		if g.WaveSpawner.EventName != "" {
+		if g.WaveSpawner.IsFinalWave() {
+			g.BannerText = "FINAL WAVE INCOMING"
+			g.BannerTimer = 2.5
+			g.BannerColor = ui.ColorBoldRed
+		} else if g.WaveSpawner.EventName != "" {
 			g.BannerText = g.WaveSpawner.EventName
 			g.BannerTimer = 2.0
 			g.BannerColor = ui.ColorBoldRed
@@ -390,7 +434,7 @@ func (g *Game) update(dt float64) {
 		}
 	}
 
-	if g.WaveSpawner.AllSpawned() && len(g.Enemies) == 0 {
+	if g.WaveSpawner.AllSpawned() && len(g.Enemies) == 0 && !g.WaveSpawner.IsFinalWave() {
 		g.WaveSpawner.NextWave()
 		g.showWaveReward()
 	}
@@ -467,6 +511,9 @@ func (g *Game) render() {
 
 	case StateGameOver:
 		g.renderGameOver()
+
+	case StateVictory:
+		g.renderVictory()
 	}
 
 	g.Term.EndFrame()
@@ -511,6 +558,7 @@ func (g *Game) startGame() {
 	g.GravityWellActive = false
 	g.HasSecondWind = false
 	g.LastDir = physics.Vec2{}
+	g.ElderBoss = nil
 
 	g.WeaponSelect = ui.NewWeaponSelectScreen()
 	g.State = StateWeaponSelect
@@ -570,7 +618,7 @@ func (g *Game) applyHit(hit weapon.HitResult) {
 		dmg *= 2
 	}
 	if g.GiantSlayerActive {
-		if e.Type == entity.EnemyBoss || e.Type == entity.EnemyTank {
+		if e.Type == entity.EnemyBoss || e.Type == entity.EnemyTank || e.Type == entity.EnemyElderVampyre {
 			dmg *= 5
 		} else {
 			dmg /= 2
@@ -749,7 +797,9 @@ func (g *Game) ownedWeaponKinds() []weapon.WeaponKind {
 
 func (g *Game) spawnDeathParticles(e *entity.Enemy) {
 	count := 3 + rand.Intn(3) // 3-5
-	if e.Type == entity.EnemyBoss {
+	if e.Type == entity.EnemyElderVampyre {
+		count = 15 + rand.Intn(10) // 15-24
+	} else if e.Type == entity.EnemyBoss {
 		count = 8 + rand.Intn(5) // 8-12
 	}
 	chars := []rune{'*', 'x', '~'}
@@ -769,7 +819,7 @@ func (g *Game) spawnDeathParticles(e *entity.Enemy) {
 
 func (g *Game) trySpawnHPDrop(e *entity.Enemy) {
 	drop := false
-	if e.Type == entity.EnemyBoss {
+	if e.Type == entity.EnemyBoss || e.Type == entity.EnemyElderVampyre {
 		drop = true
 	} else if rand.Float64() < 0.05 {
 		drop = true
@@ -822,6 +872,16 @@ func (g *Game) spawnEnemyAtEdge() *entity.Enemy {
 	e.ScaleForWave(g.WaveSpawner.CurrentWave)
 	e.Speed *= g.EnemySpeedMult
 	e.Body.MaxSpeed *= g.EnemySpeedMult
+
+	// Elder Vampyre spawns at world center
+	if e.Type == entity.EnemyElderVampyre {
+		e.Body.Pos = physics.Vec2{X: WorldWidth / 2, Y: WorldHeight / 2}
+		g.ElderBoss = e
+		g.BannerText = "THE ELDER VAMPYRE"
+		g.BannerTimer = 3.0
+		g.BannerColor = ui.ColorBoldRed
+		return e
+	}
 
 	// Blood Moon: extra HP scaling
 	if g.WaveSpawner.Event == world.EventBloodMoon {
@@ -893,6 +953,25 @@ func (g *Game) renderGameOver() {
 
 	hint := "Press ENTER for menu, Q to quit"
 	g.Term.WriteStr((w-len(hint))/2, h/2+5, hint, ui.ColorDim)
+}
+
+func (g *Game) renderVictory() {
+	w := g.Term.Width()
+	h := g.Term.Height()
+
+	title := "=== VICTORY ==="
+	g.Term.WriteStr((w-len(title))/2, h/2-4, title, ui.ColorGreen)
+
+	sub := "The Elder Vampyre has been slain!"
+	g.Term.WriteStr((w-len(sub))/2, h/2-2, sub, ui.ColorYellow)
+
+	minutes := int(g.PlayTime) / 60
+	seconds := int(g.PlayTime) % 60
+	timeLine := fmt.Sprintf("Time: %d:%02d  Kills: %d", minutes, seconds, g.Kills)
+	g.Term.WriteStr((w-len(timeLine))/2, h/2, timeLine, ui.ColorWhite)
+
+	hint := "Press ENTER for menu, Q to quit"
+	g.Term.WriteStr((w-len(hint))/2, h/2+3, hint, ui.ColorDim)
 }
 
 func (g *Game) showWaveReward() {
