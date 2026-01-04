@@ -960,18 +960,61 @@ func (g *Game) renderVictory() {
 	h := g.Term.Height()
 
 	title := "=== VICTORY ==="
-	g.Term.WriteStr((w-len(title))/2, h/2-4, title, ui.ColorGreen)
+	g.Term.WriteStr((w-len(title))/2, h/2-8, title, ui.ColorGreen)
 
 	sub := "The Elder Vampyre has been slain!"
-	g.Term.WriteStr((w-len(sub))/2, h/2-2, sub, ui.ColorYellow)
+	g.Term.WriteStr((w-len(sub))/2, h/2-6, sub, ui.ColorYellow)
+
+	hpPct := 0.0
+	if g.Player.MaxHP > 0 {
+		hpPct = float64(g.Player.HP) / float64(g.Player.MaxHP)
+	}
+	rank := CalculateRank(RunStats{
+		Time:        g.PlayTime,
+		Kills:       g.Kills,
+		HPPercent:   hpPct,
+		Level:       g.Player.Level,
+		DamageDealt: g.DamageDealt,
+		BestStreak:  g.Combo.BestStreak,
+	})
+
+	rankColor := ui.ColorWhite
+	switch rank {
+	case RankS:
+		rankColor = ui.ColorYellow
+	case RankA:
+		rankColor = ui.ColorGreen
+	case RankB:
+		rankColor = ui.ColorCyan
+	case RankC:
+		rankColor = ui.ColorMagenta
+	case RankD:
+		rankColor = ui.ColorRed
+	}
+	rankLine := fmt.Sprintf("RANK: %s", rank.String())
+	g.Term.WriteStr((w-len(rankLine))/2, h/2-4, rankLine, rankColor)
 
 	minutes := int(g.PlayTime) / 60
 	seconds := int(g.PlayTime) % 60
-	timeLine := fmt.Sprintf("Time: %d:%02d  Kills: %d", minutes, seconds, g.Kills)
-	g.Term.WriteStr((w-len(timeLine))/2, h/2, timeLine, ui.ColorWhite)
+
+	stats := []struct {
+		label string
+		color string
+	}{
+		{label: fmt.Sprintf("Time: %d:%02d", minutes, seconds), color: ui.ColorYellow},
+		{label: fmt.Sprintf("Kills: %d", g.Kills), color: ui.ColorRed},
+		{label: fmt.Sprintf("Level: %d", g.Player.Level), color: ui.ColorCyan},
+		{label: fmt.Sprintf("HP: %d/%d (%.0f%%)", g.Player.HP, g.Player.MaxHP, hpPct*100), color: ui.ColorGreen},
+		{label: fmt.Sprintf("Damage Dealt: %d", g.DamageDealt), color: ui.ColorWhite},
+		{label: fmt.Sprintf("Best Streak: %d", g.Combo.BestStreak), color: ui.ColorMagenta},
+	}
+
+	for i, s := range stats {
+		g.Term.WriteStr((w-len(s.label))/2, h/2-2+i, s.label, s.color)
+	}
 
 	hint := "Press ENTER for menu, Q to quit"
-	g.Term.WriteStr((w-len(hint))/2, h/2+3, hint, ui.ColorDim)
+	g.Term.WriteStr((w-len(hint))/2, h/2+5, hint, ui.ColorDim)
 }
 
 func (g *Game) showWaveReward() {
