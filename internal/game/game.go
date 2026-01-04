@@ -941,7 +941,7 @@ func (g *Game) renderGameOver() {
 		label string
 		color string
 	}{
-		{label: fmt.Sprintf("Wave: %d", g.WaveSpawner.CurrentWave), color: ui.ColorWhite},
+		{label: fmt.Sprintf("Wave: %d/%d", g.WaveSpawner.CurrentWave, world.FinalWave), color: ui.ColorWhite},
 		{label: fmt.Sprintf("Kills: %d", g.Kills), color: ui.ColorRed},
 		{label: fmt.Sprintf("Level: %d", g.Player.Level), color: ui.ColorCyan},
 		{label: fmt.Sprintf("Time: %d:%02d", minutes, seconds), color: ui.ColorYellow},
