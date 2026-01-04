@@ -471,7 +471,11 @@ func (g *Game) render() {
 			wstats = append(wstats, w.Stats())
 		}
 		comboPct := (g.Combo.DamageMult() - 1.0) * 100
-		g.Renderer.DrawHUD(g.Player, g.WaveSpawner.CurrentWave, g.Kills, wstats, g.Combo.Count, comboPct)
+		g.Renderer.DrawHUD(g.Player, g.WaveSpawner.CurrentWave, world.FinalWave, g.Kills, wstats, g.Combo.Count, comboPct)
+
+		if g.ElderBoss != nil && g.ElderBoss.IsAlive() {
+			g.Renderer.DrawBossHP("THE ELDER VAMPYRE", g.ElderBoss.HP, g.ElderBoss.MaxHP)
+		}
 
 		// Combo label banner
 		if label := g.Combo.Label(); label != "" {

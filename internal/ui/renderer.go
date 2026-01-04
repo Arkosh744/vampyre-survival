@@ -91,6 +91,20 @@ func (r *Renderer) DrawEnemy(e *entity.Enemy) {
 	}
 	sx, sy := r.Camera.WorldToScreen(e.Body.Pos)
 	switch e.Type {
+	case entity.EnemyElderVampyre:
+		color := ColorMagenta
+		if e.Enraged {
+			color = ColorBoldRed
+		}
+		for dy := -1; dy <= 1; dy++ {
+			for dx := -2; dx <= 2; dx++ {
+				ch := rune('E')
+				if dx == 0 && dy == 0 {
+					ch = 'V'
+				}
+				r.Term.SetCell(sx+dx, sy+dy, ch, color)
+			}
+		}
 	case entity.EnemyBoss:
 		r.Term.SetCell(sx, sy, 'B', ColorBoldRed)
 	case entity.EnemySwarmer:
@@ -218,7 +232,7 @@ func (r *Renderer) drawBorderCell(pos physics.Vec2) {
 	r.Term.SetCell(sx, sy, '#', ColorWhite)
 }
 
-func (r *Renderer) DrawHUD(p *entity.Player, wave int, kills int, weapons []weapon.WeaponStats, comboCount int, comboDmgPct float64) {
+func (r *Renderer) DrawHUD(p *entity.Player, wave int, totalWaves int, kills int, weapons []weapon.WeaponStats, comboCount int, comboDmgPct float64) {
 	h := r.Term.Height()
 	w := r.Term.Width()
 
@@ -271,7 +285,14 @@ func (r *Renderer) DrawHUD(p *entity.Player, wave int, kills int, weapons []weap
 	}
 
 	// Row h-1: wave info
-	r.Term.WriteStr(0, h-1, fmt.Sprintf("Wave: %d  Kills: %d", wave, kills), ColorWhite)
+	r.Term.WriteStr(0, h-1, fmt.Sprintf("Wave: %d/%d  Kills: %d", wave, totalWaves, kills), ColorWhite)
+}
+
+func (r *Renderer) DrawBossHP(name string, hp, maxHP int) {
+	w := r.Term.Width()
+	bar := renderBar(hp, maxHP, 30)
+	line := fmt.Sprintf("%s %s %d/%d", name, bar, hp, maxHP)
+	r.Term.WriteStr((w-len(line))/2, 1, line, ColorBoldRed)
 }
 
 func renderBar(current, max, width int) string {
