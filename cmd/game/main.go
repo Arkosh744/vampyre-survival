@@ -13,5 +13,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to start: %v\n", err)
 		os.Exit(1)
 	}
+	
 	g.Run()
 }
