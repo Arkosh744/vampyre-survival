@@ -1,6 +1,10 @@
 package ui
 
-import "fmt"
+import (
+	"image/color"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 type WeaponChoice struct {
 	Name        string
@@ -43,27 +47,44 @@ func (ws *WeaponSelectScreen) Selected() WeaponChoice {
 	return ws.Choices[ws.selected]
 }
 
-func (ws *WeaponSelectScreen) Draw(t *Terminal) {
-	w := t.Width()
-	h := t.Height()
+// Draw renders the weapon selection screen directly onto an Ebitengine image.
+func (ws *WeaponSelectScreen) Draw(dst *ebiten.Image) {
+	w := dst.Bounds().Dx()
+	h := dst.Bounds().Dy()
+
+	// Fill background
+	dst.Fill(color.RGBA{R: 10, G: 5, B: 15, A: 255})
+
+	// Box
+	boxW := 280.0
+	boxH := 240.0
+	boxX := (float64(w) - boxW) / 2
+	boxY := (float64(h) - boxH) / 2
+	DrawFilledRect(dst, boxX, boxY, boxW, boxH, color.RGBA{R: 15, G: 10, B: 25, A: 240})
 
 	title := "=== CHOOSE YOUR WEAPON ==="
-	t.WriteStr((w-len(title))/2, h/2-5, title, ColorYellow)
+	titleW := len(title) * 7
+	DrawText(dst, (w-titleW)/2, int(boxY)+10, title, ColorToRGBA(ColorYellow))
 
-	subtitle := "Up/Down to select, Enter to confirm"
-	t.WriteStr((w-len(subtitle))/2, h/2-3, subtitle, ColorDim)
+	hint := "Up/Down to select, Enter to confirm"
+	hintW := len(hint) * 7
+	DrawText(dst, (w-hintW)/2, int(boxY)+24, hint, ColorToRGBA(ColorDim))
 
+	startY := int(boxY) + 40
 	for i, choice := range ws.Choices {
-		color := ColorWhite
-		descColor := ColorDim
+		nameClr := ColorToRGBA(ColorWhite)
+		descClr := ColorToRGBA(ColorDim)
 		prefix := "  "
 		if i == ws.selected {
-			color = ColorGreen
-			descColor = ColorCyan
+			nameClr = ColorToRGBA(ColorGreen)
+			descClr = ColorToRGBA(ColorCyan)
 			prefix = "> "
+			DrawFilledRect(dst, boxX+10, float64(startY+i*36-2), boxW-20, 32, color.RGBA{R: 20, G: 40, B: 20, A: 200})
 		}
-		name := fmt.Sprintf("%s%s", prefix, choice.Name)
-		t.WriteStr((w-len(name))/2, h/2-1+i*2, name, color)
-		t.WriteStr((w-len(choice.Description))/2, h/2+i*2, choice.Description, descColor)
+		name := prefix + choice.Name
+		nameW := len(name) * 7
+		DrawText(dst, (w-nameW)/2, startY+i*36, name, nameClr)
+		descW := len(choice.Description) * 7
+		DrawText(dst, (w-descW)/2, startY+i*36+16, choice.Description, descClr)
 	}
 }

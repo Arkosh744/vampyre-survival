@@ -2,6 +2,9 @@ package ui
 
 import (
 	"fmt"
+	"image/color"
+
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/arkosh/vampyre-survival/internal/reward"
 )
@@ -66,28 +69,41 @@ func rarityLabel(r reward.RewardRarity) string {
 	}
 }
 
-func (s *WaveRewardScreen) Draw(t *Terminal) {
-	w := t.Width()
-	h := t.Height()
+// Draw renders the wave reward screen directly onto an Ebitengine image.
+func (s *WaveRewardScreen) Draw(dst *ebiten.Image) {
+	w := dst.Bounds().Dx()
+	h := dst.Bounds().Dy()
+
+	boxW := 280.0
+	boxH := 180.0
+	boxX := (float64(w) - boxW) / 2
+	boxY := (float64(h) - boxH) / 2
+	DrawFilledRect(dst, boxX, boxY, boxW, boxH, color.RGBA{R: 15, G: 10, B: 25, A: 240})
 
 	title := "=== WAVE COMPLETE ==="
-	t.WriteStr((w-len(title))/2, h/2-6, title, ColorMagenta)
+	titleW := len(title) * 7
+	DrawText(dst, (w-titleW)/2, int(boxY)+10, title, ColorToRGBA(ColorMagenta))
 
 	subtitle := "Choose a reward:"
-	t.WriteStr((w-len(subtitle))/2, h/2-4, subtitle, ColorWhite)
+	subW := len(subtitle) * 7
+	DrawText(dst, (w-subW)/2, int(boxY)+24, subtitle, ColorToRGBA(ColorWhite))
 
+	startY := int(boxY) + 40
 	for i, choice := range s.Choices {
-		nameColor := rarityColor(choice.Rarity)
-		descColor := ColorDim
+		nameClr := ColorToRGBA(rarityColor(choice.Rarity))
+		descClr := ColorToRGBA(ColorDim)
 		prefix := "  "
 		if i == s.selected {
-			nameColor = ColorYellow
-			descColor = ColorCyan
+			nameClr = ColorToRGBA(ColorYellow)
+			descClr = ColorToRGBA(ColorCyan)
 			prefix = "> "
+			DrawFilledRect(dst, boxX+10, float64(startY+i*36-2), boxW-20, 32, color.RGBA{R: 30, G: 20, B: 40, A: 200})
 		}
 		tag := fmt.Sprintf("[%s]", rarityLabel(choice.Rarity))
 		name := fmt.Sprintf("%s%s %s", prefix, choice.Name, tag)
-		t.WriteStr((w-len(name))/2, h/2-2+i*3, name, nameColor)
-		t.WriteStr((w-len(choice.Description))/2, h/2-1+i*3, choice.Description, descColor)
+		nameW := len(name) * 7
+		DrawText(dst, (w-nameW)/2, startY+i*36, name, nameClr)
+		descW := len(choice.Description) * 7
+		DrawText(dst, (w-descW)/2, startY+i*36+16, choice.Description, descClr)
 	}
 }
