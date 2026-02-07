@@ -1,6 +1,13 @@
 package engine
 
-import "github.com/arkosh/vampyre-survival/internal/physics"
+import (
+	"math"
+
+	"github.com/arkosh/vampyre-survival/internal/physics"
+)
+
+// TileSize is the pixel size of one world unit.
+const TileSize = 16
 
 type Camera struct {
 	Pos         physics.Vec2
@@ -8,6 +15,7 @@ type Camera struct {
 	Height      int
 	WorldWidth  float64
 	WorldHeight float64
+	Smoothness  float64
 }
 
 func NewCamera(width, height int) *Camera {
@@ -19,9 +27,21 @@ func (c *Camera) SetWorldBounds(w, h float64) {
 	c.WorldHeight = h
 }
 
+// Follow moves the camera toward the target position.
+// When Smoothness is 0, the camera snaps instantly.
+// When Smoothness > 0, it uses exponential lerp for smooth tracking.
 func (c *Camera) Follow(target physics.Vec2, dt float64) {
-	c.Pos.X = target.X - float64(c.Width)/2
-	c.Pos.Y = target.Y - float64(c.Height)/2
+	desired := physics.Vec2{
+		X: target.X - float64(c.Width)/2,
+		Y: target.Y - float64(c.Height)/2,
+	}
+	if c.Smoothness > 0 {
+		t := 1.0 - math.Pow(c.Smoothness, dt)
+		c.Pos.X += (desired.X - c.Pos.X) * t
+		c.Pos.Y += (desired.Y - c.Pos.Y) * t
+	} else {
+		c.Pos = desired
+	}
 	c.clamp()
 }
 
@@ -40,8 +60,14 @@ func (c *Camera) clamp() {
 	}
 }
 
+// WorldToScreen converts world coordinates to character-cell screen coordinates.
 func (c *Camera) WorldToScreen(worldPos physics.Vec2) (int, int) {
 	return int(worldPos.X - c.Pos.X), int(worldPos.Y - c.Pos.Y)
+}
+
+// WorldToScreenPx converts world coordinates to pixel screen coordinates.
+func (c *Camera) WorldToScreenPx(worldPos physics.Vec2) (float64, float64) {
+	return (worldPos.X - c.Pos.X) * TileSize, (worldPos.Y - c.Pos.Y) * TileSize
 }
 
 func (c *Camera) IsVisible(worldPos physics.Vec2) bool {

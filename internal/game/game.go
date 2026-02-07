@@ -3,7 +3,9 @@ package game
 import (
 	"fmt"
 	"math/rand"
-	"time"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/arkosh/vampyre-survival/internal/engine"
 	"github.com/arkosh/vampyre-survival/internal/entity"
@@ -33,12 +35,13 @@ const (
 	WorldHeight = 200.0
 	TargetFPS   = 30
 	MaxWeapons  = 3
+	LogicalW    = 640
+	LogicalH    = 360
 )
 
 type Game struct {
 	State    GameState
-	Term     *ui.Terminal
-	Input    *ui.Input
+	escreen  *ui.EbitenScreen
 	Renderer *ui.Renderer
 	Camera   *engine.Camera
 
@@ -102,142 +105,154 @@ type Game struct {
 	LastDir           physics.Vec2
 }
 
-func NewGame() (*Game, error) {
-	t, err := ui.NewTerminal()
-	if err != nil {
-		return nil, err
-	}
-
-	cam := engine.NewCamera(t.Width(), t.Height()-6)
+func NewGame() *Game {
+	scr := ui.NewEbitenScreen(LogicalW, LogicalH)
+	cam := engine.NewCamera(LogicalW/engine.TileSize, LogicalH/engine.TileSize)
+	cam.Smoothness = 0.05
 	cam.SetWorldBounds(WorldWidth, WorldHeight)
 
-	g := &Game{
+	return &Game{
 		State:    StateMenu,
-		Term:     t,
-		Input:    ui.NewInput(),
+		escreen:  scr,
 		Camera:   cam,
-		Renderer: ui.NewRenderer(t, cam),
+		Renderer: ui.NewRenderer(cam),
 		Menu:     ui.NewMenu(),
 		Running:  true,
 	}
-
-	return g, nil
 }
 
-func (g *Game) Run() {
-	defer g.Term.Close()
-	defer g.Input.Close()
-
-	ticker := time.NewTicker(time.Second / TargetFPS)
-	defer ticker.Stop()
-
-	for g.Running {
-		<-ticker.C
-		dt := 1.0 / float64(TargetFPS)
-
-		g.handleInput()
-		g.update(dt)
-		g.render()
+// Update implements ebiten.Game interface — called every tick (~60 TPS).
+func (g *Game) Update() error {
+	if !g.Running {
+		return ebiten.Termination
 	}
+
+	dt := 1.0 / 60.0
+	if tps := ebiten.ActualTPS(); tps > 0 {
+		dt = 1.0 / tps
+	}
+
+	g.handleInput()
+	g.update(dt)
+	return nil
+}
+
+// Draw implements ebiten.Game interface — called every frame.
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.escreen.SetTarget(screen)
+	g.render()
+}
+
+// Layout implements ebiten.Game interface — returns the logical screen size.
+func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+	return LogicalW, LogicalH
 }
 
 func (g *Game) handleInput() {
-	key := g.Input.Poll()
-	if key == ui.KeyNone {
-		return
-	}
-
 	switch g.State {
 	case StateMenu:
-		switch key {
-		case ui.KeyUp:
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 			g.Menu.Up()
-		case ui.KeyDown:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 			g.Menu.Down()
-		case ui.KeyEnter:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			switch g.Menu.Selected() {
 			case ui.MenuStart:
 				g.startGame()
 			case ui.MenuQuit:
 				g.Running = false
 			}
-		case ui.KeyQ, ui.KeyEsc:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyQ) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			g.Running = false
 		}
 
 	case StateWeaponSelect:
-		switch key {
-		case ui.KeyUp:
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 			g.WeaponSelect.Up()
-		case ui.KeyDown:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 			g.WeaponSelect.Down()
-		case ui.KeyEnter:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			g.applyWeaponSelect()
 		}
 
 	case StatePlaying:
 		dir := physics.Vec2{}
-		switch key {
-		case ui.KeyUp, ui.KeyW:
+		if ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
 			dir.Y = -1
-		case ui.KeyDown, ui.KeyS:
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
 			dir.Y = 1
-		case ui.KeyLeft, ui.KeyA:
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 			dir.X = -1
-		case ui.KeyRight, ui.KeyD:
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
 			dir.X = 1
-		case ui.KeyEsc:
+		}
+
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			g.State = StatePaused
 			return
 		}
+
 		if dir.Length() > 0 {
 			g.LastDir = dir
 			g.Player.SetDirection(dir)
 		} else if g.BerserkerPactActive && g.LastDir.Length() > 0 {
 			g.Player.SetDirection(g.LastDir)
+		} else {
+			// No movement keys held and no BerserkerPact — stop the player
+			g.Player.SetDirection(physics.Vec2{})
 		}
 
 	case StateLevelUp:
-		switch key {
-		case ui.KeyUp:
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 			g.LevelUp.Up()
-		case ui.KeyDown:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 			g.LevelUp.Down()
-		case ui.KeyEnter:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			g.applyLevelUp()
 		}
 
 	case StateWaveReward:
-		switch key {
-		case ui.KeyUp:
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 			g.WaveRewardScreen.Up()
-		case ui.KeyDown:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 			g.WaveRewardScreen.Down()
-		case ui.KeyEnter:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			g.applyWaveReward()
 		}
 
 	case StatePaused:
-		switch key {
-		case ui.KeyEsc, ui.KeyEnter:
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			g.State = StatePlaying
-		case ui.KeyQ:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 			g.State = StateMenu
 		}
 
 	case StateGameOver:
-		switch key {
-		case ui.KeyEnter:
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			g.State = StateMenu
-		case ui.KeyQ, ui.KeyEsc:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyQ) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			g.Running = false
 		}
 
 	case StateVictory:
-		switch key {
-		case ui.KeyEnter:
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			g.State = StateMenu
-		case ui.KeyQ, ui.KeyEsc:
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyQ) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			g.Running = false
 		}
 	}
@@ -441,40 +456,41 @@ func (g *Game) update(dt float64) {
 }
 
 func (g *Game) render() {
-	g.Term.BeginFrame()
+	dst := g.escreen.Image()
 
 	switch g.State {
 	case StateMenu:
-		g.Menu.Draw(g.Term)
+		g.Menu.Draw(dst)
 
 	case StateWeaponSelect:
 		if g.WeaponSelect != nil {
-			g.WeaponSelect.Draw(g.Term)
+			g.WeaponSelect.Draw(dst)
 		}
 
 	case StatePlaying:
-		g.Renderer.DrawGround()
-		g.Renderer.DrawWorldBorder(WorldWidth, WorldHeight)
+		g.Renderer.DrawGround(dst)
+		g.Renderer.DrawWorldBorder(dst, WorldWidth, WorldHeight)
 		for _, p := range g.Pickups {
-			g.Renderer.DrawPickup(p)
+			g.Renderer.DrawPickup(dst, p)
 		}
 		for _, e := range g.Enemies {
-			g.Renderer.DrawEnemy(e)
+			g.Renderer.DrawEnemy(dst, e)
 		}
 		for _, w := range g.Weapons {
-			g.Renderer.DrawWeaponVisuals(w.GetVisuals())
+			g.Renderer.DrawWeaponVisuals(dst, w.GetVisuals())
 		}
-		g.Renderer.DrawEffects()
-		g.Renderer.DrawPlayer(g.Player)
+		g.Renderer.DrawEffects(dst)
+		g.Renderer.DrawPlayer(dst, g.Player)
 		var wstats []weapon.WeaponStats
 		for _, w := range g.Weapons {
 			wstats = append(wstats, w.Stats())
 		}
 		comboPct := (g.Combo.DamageMult() - 1.0) * 100
-		g.Renderer.DrawHUD(g.Player, g.WaveSpawner.CurrentWave, world.FinalWave, g.Kills, wstats, g.Combo.Count, comboPct)
+		g.Renderer.DrawHUD(dst, g.Player, g.WaveSpawner.CurrentWave, world.FinalWave, g.Kills, wstats, g.Combo.Count, comboPct)
+		g.Renderer.DrawBottomBar(dst, g.WaveSpawner.CurrentWave, world.FinalWave, g.Kills, len(g.Enemies))
 
 		if g.ElderBoss != nil && g.ElderBoss.IsAlive() {
-			g.Renderer.DrawBossHP("THE ELDER VAMPYRE", g.ElderBoss.HP, g.ElderBoss.MaxHP)
+			g.Renderer.DrawBossHP(dst, "THE ELDER VAMPYRE", g.ElderBoss.HP, g.ElderBoss.MaxHP)
 		}
 
 		// Combo label banner
@@ -485,33 +501,37 @@ func (g *Game) render() {
 			} else if g.Combo.Count >= 10 {
 				comboColor = ui.ColorMagenta
 			}
-			w := g.Term.Width()
-			g.Term.WriteStr((w-len(label))/2, 3, label, comboColor)
+			screenW := dst.Bounds().Dx()
+			textW := len(label) * 7
+			ui.DrawText(dst, (screenW-textW)/2, 65, label, ui.ColorToRGBA(comboColor))
 		}
 
 		// Wave event banner
 		if g.BannerTimer > 0 && g.BannerText != "" {
-			w := g.Term.Width()
-			g.Term.WriteStr((w-len(g.BannerText))/2, 2, g.BannerText, g.BannerColor)
+			screenW := dst.Bounds().Dx()
+			textW := len(g.BannerText) * 7
+			ui.DrawText(dst, (screenW-textW)/2, 18, g.BannerText, ui.ColorToRGBA(g.BannerColor))
 		}
 
 	case StateLevelUp:
 		if g.LevelUp != nil {
-			g.LevelUp.Draw(g.Term)
+			g.LevelUp.Draw(dst)
 		}
 
 	case StateWaveReward:
 		if g.WaveRewardScreen != nil {
-			g.WaveRewardScreen.Draw(g.Term)
+			g.WaveRewardScreen.Draw(dst)
 		}
 
 	case StatePaused:
-		w := g.Term.Width()
-		h := g.Term.Height()
+		screenW := dst.Bounds().Dx()
+		screenH := dst.Bounds().Dy()
 		msg := "=== PAUSED ==="
-		g.Term.WriteStr((w-len(msg))/2, h/2, msg, ui.ColorYellow)
+		textW := len(msg) * 7
+		ui.DrawText(dst, (screenW-textW)/2, screenH/2, msg, ui.ColorToRGBA(ui.ColorYellow))
 		hint := "ESC to resume, Q to menu"
-		g.Term.WriteStr((w-len(hint))/2, h/2+2, hint, ui.ColorDim)
+		hintW := len(hint) * 7
+		ui.DrawText(dst, (screenW-hintW)/2, screenH/2+16, hint, ui.ColorToRGBA(ui.ColorDim))
 
 	case StateGameOver:
 		g.renderGameOver()
@@ -519,8 +539,6 @@ func (g *Game) render() {
 	case StateVictory:
 		g.renderVictory()
 	}
-
-	g.Term.EndFrame()
 }
 
 func (g *Game) startGame() {
@@ -928,11 +946,18 @@ func (g *Game) spawnEnemyAtEdge() *entity.Enemy {
 }
 
 func (g *Game) renderGameOver() {
-	w := g.Term.Width()
-	h := g.Term.Height()
+	dst := g.escreen.Image()
+	screenW := dst.Bounds().Dx()
+	screenH := dst.Bounds().Dy()
+	cx := screenW / 2
+
+	// Dark background
+	dst.Fill(ui.ColorToRGBA(ui.ColorDim))
+	ui.DrawFilledRect(dst, float64(cx)-130, float64(screenH/2)-75, 260, 170, ui.ColorToRGBA("\033[0m"))
 
 	title := "GAME OVER"
-	g.Term.WriteStr((w-len(title))/2, h/2-6, title, ui.ColorBoldRed)
+	titleW := len(title) * 7
+	ui.DrawText(dst, (screenW-titleW)/2, screenH/2-70, title, ui.ColorToRGBA(ui.ColorBoldRed))
 
 	minutes := int(g.PlayTime) / 60
 	seconds := int(g.PlayTime) % 60
@@ -952,22 +977,31 @@ func (g *Game) renderGameOver() {
 	}
 
 	for i, s := range stats {
-		g.Term.WriteStr((w-len(s.label))/2, h/2-3+i, s.label, s.color)
+		textW := len(s.label) * 7
+		ui.DrawText(dst, (screenW-textW)/2, screenH/2-45+i*16, s.label, ui.ColorToRGBA(s.color))
 	}
 
 	hint := "Press ENTER for menu, Q to quit"
-	g.Term.WriteStr((w-len(hint))/2, h/2+5, hint, ui.ColorDim)
+	hintW := len(hint) * 7
+	ui.DrawText(dst, (screenW-hintW)/2, screenH/2+70, hint, ui.ColorToRGBA(ui.ColorDim))
 }
 
 func (g *Game) renderVictory() {
-	w := g.Term.Width()
-	h := g.Term.Height()
+	dst := g.escreen.Image()
+	screenW := dst.Bounds().Dx()
+	screenH := dst.Bounds().Dy()
+
+	// Dark background with box
+	dst.Fill(ui.ColorToRGBA(ui.ColorDim))
+	ui.DrawFilledRect(dst, float64(screenW/2)-140, float64(screenH/2)-95, 280, 200, ui.ColorToRGBA("\033[0m"))
 
 	title := "=== VICTORY ==="
-	g.Term.WriteStr((w-len(title))/2, h/2-8, title, ui.ColorGreen)
+	titleW := len(title) * 7
+	ui.DrawText(dst, (screenW-titleW)/2, screenH/2-90, title, ui.ColorToRGBA(ui.ColorGreen))
 
 	sub := "The Elder Vampyre has been slain!"
-	g.Term.WriteStr((w-len(sub))/2, h/2-6, sub, ui.ColorYellow)
+	subW := len(sub) * 7
+	ui.DrawText(dst, (screenW-subW)/2, screenH/2-74, sub, ui.ColorToRGBA(ui.ColorYellow))
 
 	hpPct := 0.0
 	if g.Player.MaxHP > 0 {
@@ -996,7 +1030,8 @@ func (g *Game) renderVictory() {
 		rankColor = ui.ColorRed
 	}
 	rankLine := fmt.Sprintf("RANK: %s", rank.String())
-	g.Term.WriteStr((w-len(rankLine))/2, h/2-4, rankLine, rankColor)
+	rankW := len(rankLine) * 7
+	ui.DrawText(dst, (screenW-rankW)/2, screenH/2-56, rankLine, ui.ColorToRGBA(rankColor))
 
 	minutes := int(g.PlayTime) / 60
 	seconds := int(g.PlayTime) % 60
@@ -1014,11 +1049,13 @@ func (g *Game) renderVictory() {
 	}
 
 	for i, s := range stats {
-		g.Term.WriteStr((w-len(s.label))/2, h/2-2+i, s.label, s.color)
+		textW := len(s.label) * 7
+		ui.DrawText(dst, (screenW-textW)/2, screenH/2-38+i*16, s.label, ui.ColorToRGBA(s.color))
 	}
 
 	hint := "Press ENTER for menu, Q to quit"
-	g.Term.WriteStr((w-len(hint))/2, h/2+5, hint, ui.ColorDim)
+	hintW := len(hint) * 7
+	ui.DrawText(dst, (screenW-hintW)/2, screenH/2+80, hint, ui.ColorToRGBA(ui.ColorDim))
 }
 
 func (g *Game) showWaveReward() {
