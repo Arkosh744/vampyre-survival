@@ -12,8 +12,8 @@ const (
 	PlayerWidth       = 1.0
 	PlayerHeight      = 1.0
 	InvulnDuration    = 0.5
-	BaseXPToLevel     = 5.0
-	XPLevelMultiplier = 1.3
+	BaseXPToLevel   = 40.0
+	XPLevelExponent = 0.5
 )
 
 type Player struct {
@@ -89,7 +89,7 @@ func (p *Player) AddXP(amount int) bool {
 }
 
 func (p *Player) XPToNextLevel() int {
-	return int(BaseXPToLevel * math.Pow(XPLevelMultiplier, float64(p.Level-1)))
+	return int(BaseXPToLevel * math.Pow(float64(p.Level), XPLevelExponent))
 }
 
 func (p *Player) AddMaxHP(v int) {
