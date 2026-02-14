@@ -1,7 +1,9 @@
 package ui
 
 import (
-	"fmt"
+	"image/color"
+
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/arkosh/vampyre-survival/internal/skill"
 )
@@ -40,27 +42,43 @@ func (l *LevelUpScreen) SelectedUpgrade() skill.Upgrade {
 	return skill.Upgrade{}
 }
 
-func (l *LevelUpScreen) Draw(t *Terminal) {
-	w := t.Width()
-	h := t.Height()
+// Draw renders the level-up screen directly onto an Ebitengine image.
+func (l *LevelUpScreen) Draw(dst *ebiten.Image) {
+	w := dst.Bounds().Dx()
+	h := dst.Bounds().Dy()
 
+	// Semi-transparent overlay box in center
+	boxW := 250.0
+	boxH := 180.0
+	boxX := (float64(w) - boxW) / 2
+	boxY := (float64(h) - boxH) / 2
+	DrawFilledRect(dst, boxX, boxY, boxW, boxH, color.RGBA{R: 10, G: 10, B: 20, A: 230})
+
+	// Title
 	title := "=== LEVEL UP! ==="
-	t.WriteStr((w-len(title))/2, h/2-5, title, ColorYellow)
+	titleW := len(title) * 7
+	DrawText(dst, (w-titleW)/2, int(boxY)+10, title, ColorToRGBA(ColorYellow))
 
 	subtitle := "Choose an upgrade:"
-	t.WriteStr((w-len(subtitle))/2, h/2-3, subtitle, ColorWhite)
+	subW := len(subtitle) * 7
+	DrawText(dst, (w-subW)/2, int(boxY)+24, subtitle, ColorToRGBA(ColorWhite))
 
+	startY := int(boxY) + 40
 	for i, choice := range l.Choices {
-		color := ColorWhite
-		descColor := ColorDim
+		nameClr := ColorToRGBA(ColorWhite)
+		descClr := ColorToRGBA(ColorDim)
 		prefix := "  "
 		if i == l.selected {
-			color = ColorGreen
-			descColor = ColorCyan
+			nameClr = ColorToRGBA(ColorGreen)
+			descClr = ColorToRGBA(ColorCyan)
 			prefix = "> "
+			// Highlight bar
+			DrawFilledRect(dst, boxX+10, float64(startY+i*35-2), boxW-20, 30, color.RGBA{R: 20, G: 40, B: 20, A: 200})
 		}
-		name := fmt.Sprintf("%s%s", prefix, choice.Name)
-		t.WriteStr((w-len(name))/2, h/2-1+i*2, name, color)
-		t.WriteStr((w-len(choice.Description))/2, h/2+i*2, choice.Description, descColor)
+		name := prefix + choice.Name
+		nameW := len(name) * 7
+		DrawText(dst, (w-nameW)/2, startY+i*35, name, nameClr)
+		descW := len(choice.Description) * 7
+		DrawText(dst, (w-descW)/2, startY+i*35+16, choice.Description, descClr)
 	}
 }

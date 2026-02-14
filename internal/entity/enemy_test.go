@@ -21,7 +21,7 @@ func Test_Enemy_NewBoss(t *testing.T) {
 	e := NewEnemy(EnemyBoss, 0, 0)
 	require.Equal(t, EnemyBoss, e.Type)
 	require.Greater(t, e.HP, 50)
-	require.Equal(t, 10, e.XPDrop)
+	require.Equal(t, 5, e.XPDrop)
 }
 
 func Test_Enemy_NewSwarmer(t *testing.T) {
@@ -39,7 +39,7 @@ func Test_Enemy_NewTank(t *testing.T) {
 	require.Equal(t, 60, e.HP)
 	require.Equal(t, 15, e.Damage)
 	require.Equal(t, 4.0, e.Speed)
-	require.Equal(t, 5, e.XPDrop)
+	require.Equal(t, 3, e.XPDrop)
 }
 
 func Test_Enemy_NewDasher(t *testing.T) {
@@ -48,7 +48,7 @@ func Test_Enemy_NewDasher(t *testing.T) {
 	require.Equal(t, 10, e.HP)
 	require.Equal(t, 25, e.Damage)
 	require.Equal(t, DasherIdleSpeed, e.Speed)
-	require.Equal(t, 3, e.XPDrop)
+	require.Equal(t, 2, e.XPDrop)
 	require.False(t, e.Dashing)
 }
 
@@ -101,7 +101,7 @@ func Test_Enemy_NewElderVampyre(t *testing.T) {
 	require.Equal(t, ElderBaseHP, e.MaxHP)
 	require.Equal(t, ElderBaseDMG, e.Damage)
 	require.Equal(t, ElderBaseSpeed, e.Speed)
-	require.Equal(t, 50, e.XPDrop)
+	require.Equal(t, 25, e.XPDrop)
 	require.Equal(t, 5.0, e.Body.Width)
 	require.Equal(t, 3.0, e.Body.Height)
 	require.Equal(t, ElderSpawnCD, e.SpawnCD)

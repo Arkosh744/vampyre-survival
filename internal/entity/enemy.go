@@ -59,7 +59,7 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 		e.MaxHP = 80
 		e.Damage = 20
 		e.Speed = 12.0
-		e.XPDrop = 10
+		e.XPDrop = 5
 		e.Body = physics.Body{
 			Pos:      physics.Vec2{X: x, Y: y},
 			MaxSpeed: 12.0,
@@ -83,7 +83,7 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 		e.MaxHP = 60
 		e.Damage = 15
 		e.Speed = 4.0
-		e.XPDrop = 5
+		e.XPDrop = 3
 		e.Body = physics.Body{
 			Pos:      physics.Vec2{X: x, Y: y},
 			MaxSpeed: 4.0,
@@ -95,7 +95,7 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 		e.MaxHP = 10
 		e.Damage = 25
 		e.Speed = DasherIdleSpeed
-		e.XPDrop = 3
+		e.XPDrop = 2
 		e.Body = physics.Body{
 			Pos:      physics.Vec2{X: x, Y: y},
 			MaxSpeed: DasherDashSpeed,
@@ -107,7 +107,7 @@ func NewEnemy(typ EnemyType, x, y float64) *Enemy {
 		e.MaxHP = ElderBaseHP
 		e.Damage = ElderBaseDMG
 		e.Speed = ElderBaseSpeed
-		e.XPDrop = 50
+		e.XPDrop = 25
 		e.SpawnCD = ElderSpawnCD
 		e.Body = physics.Body{
 			Pos:      physics.Vec2{X: x, Y: y},
